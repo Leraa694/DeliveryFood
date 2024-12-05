@@ -1,3 +1,4 @@
+from Tools.scripts.cleanfuture import verbose
 from django.contrib.auth.models import AbstractUser
 from simple_history.models import HistoricalRecords
 from django.db import models
@@ -8,7 +9,9 @@ class User(AbstractUser):
         ('client', 'Клиент'),
         ('courier', 'Курьер'),
         ('admin', 'Администратор'),
+        ('restaurant service', 'Сервис ресторана'),
     ]
+
 
     # Поля, которых нет в AbstractUser
     phone = models.CharField(max_length=15, verbose_name="Номер телефона")
@@ -37,12 +40,22 @@ class User(AbstractUser):
         verbose_name_plural = "Пользователи"
 
 
+class TypeCuisine(models.Model):
+    cuisine_type = models.CharField(max_length=20, verbose_name="Тип кухни")
+
+    def __str__(self):
+        return self.cuisine_type
+
+    class Meta:
+        verbose_name = "Тип кухни"
+        verbose_name_plural = "Типы кухонь"
 
 class Restaurant(models.Model):
+
     name = models.CharField(max_length=255, verbose_name="Название ресторана")
     address = models.TextField(verbose_name="Адрес ресторана")
     phone = models.CharField(max_length=15, verbose_name="Телефон ресторана")
-    cuisine_type = models.CharField(max_length=100, verbose_name="Тип кухни")
+    restaurant = models.ManyToManyField(TypeCuisine, related_name='TypesCusineONRestaurant', verbose_name="Тип кухни")
 
     def __str__(self):
         return self.name
@@ -50,6 +63,12 @@ class Restaurant(models.Model):
     class Meta:
         verbose_name = "Ресторан"
         verbose_name_plural = "Рестораны"
+
+
+# class TypesCusineONRestaurant(models.InlineModelAdmin):
+#
+#     IdTypeCusine = models.ForeignKey(TypeCusine, on_delete=models.CASCADE, verbose_name=('Тип кухни'))
+#     IdRestaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, verbose_name=('Ресторан'))
 
 
 class MenuItem(models.Model):
