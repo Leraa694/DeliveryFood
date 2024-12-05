@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from simple_history.models import HistoricalRecords
 from django.db import models
 
 
@@ -72,6 +73,7 @@ class MenuItem(models.Model):
 
 
 class Order(models.Model):
+    history = HistoricalRecords()
     STATUS_CHOICES = [
         ('new', 'Новый'),
         ('preparing', 'Готовится'),
@@ -101,7 +103,7 @@ class Order(models.Model):
     )
 
     def __str__(self):
-        return f"Заказ {self.id} от {self.user.name}"
+        return f"Заказ {self.id} от {self.user.first_name}"
 
     class Meta:
         verbose_name = "Заказ"
