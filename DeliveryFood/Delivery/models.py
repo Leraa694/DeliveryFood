@@ -1,3 +1,5 @@
+from email.policy import default
+
 from Tools.scripts.cleanfuture import verbose
 from django.contrib.auth.models import AbstractUser
 from simple_history.models import HistoricalRecords
@@ -113,7 +115,7 @@ class Order(models.Model):
         verbose_name="Ресторан"
     )
     order_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата заказа")
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Общая стоимость")
+    total_price = models.DecimalField(max_digits=10, default=0, decimal_places=2, verbose_name="Общая стоимость")
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -172,7 +174,7 @@ class Courier(models.Model):
     )
 
     def __str__(self):
-        return f"Курьер {self.user.name}"
+        return f"Курьер {self.user.first_name}"
 
     class Meta:
         verbose_name = "Курьер"
