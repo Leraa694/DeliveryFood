@@ -16,7 +16,7 @@ class User(AbstractUser):
 
 
     # Поля, которых нет в AbstractUser
-    phone = models.CharField(max_length=15, verbose_name="Номер телефона")
+    phone = models.CharField(max_length=18, verbose_name="Номер телефона")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес пользователя")
     role = models.CharField(max_length=20, choices=ROLES, verbose_name="Роль пользователя")
 
@@ -138,20 +138,25 @@ class OrderDetail(models.Model):
         related_name='order_details',
         verbose_name="Заказ"
     )
-    menu_item = models.ForeignKey(
+    menu_items = models.ManyToManyField(
         MenuItem,
-        on_delete=models.CASCADE,
-        verbose_name="Блюдо"
+        verbose_name="Блюда",
+        related_name='order_details'
     )
     quantity = models.PositiveIntegerField(verbose_name="Количество")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
 
     def __str__(self):
         return f"{self.quantity}x {self.menu_item.name}"
 
+    @property
+    def price(self):
+        """Вычисляет стоимость позиции на основе цены из MenuItem."""
+        return self.menu_item.price * self.quantity
+
     class Meta:
         verbose_name = "Деталь заказа"
         verbose_name_plural = "Детали заказов"
+
 
 
 class Courier(models.Model):

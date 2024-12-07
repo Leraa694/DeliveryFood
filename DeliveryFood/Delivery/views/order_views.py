@@ -7,15 +7,29 @@ from django.db.models import Q
 from rest_framework.decorators import action
 from ..models import Order
 from ..serializers.order_serializers import OrderSerializer
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet
+from django_filters import CharFilter, NumberFilter
+from rest_framework.pagination import PageNumberPagination
+
+
+# Кастомный класс фильтрации (если нужен)
+class OrderFilter(FilterSet):
+    restaurant_name = CharFilter(field_name='restaurant__name', lookup_expr='icontains')
+    min_price = NumberFilter(field_name='total_price', lookup_expr='gte')
+    max_price = NumberFilter(field_name='total_price', lookup_expr='lte')
+
+    class Meta:
+        model = Order
+        fields = ['restaurant_name', 'min_price', 'max_price']
 
 
 class StandardResultsSetPagination(PageNumberPagination):
     """
-    Кастомная пагинация для результатов.
+    Кастомная пагинация для стандартного набора результатов.
     """
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
+    page_size = 10  # Количество элементов на странице по умолчанию
+    page_size_query_param = 'page_size'  # Параметр для задания размера страницы через запрос
+    max_page_size = 100  # Максимальное количество элементов на странице
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -24,16 +38,21 @@ class OrderViewSet(viewsets.ModelViewSet):
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['restaurant__name']
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = OrderFilter  # Подключаем кастомный фильтр
     pagination_class = StandardResultsSetPagination
 
     @swagger_auto_schema(
         operation_summary="Получить список заказов с фильтрацией и пагинацией",
         manual_parameters=[
             openapi.Parameter(
-                'search', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Название ресторана'
+                'restaurant_name', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Название ресторана'
+            ),
+            openapi.Parameter(
+                'min_price', openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description='Минимальная цена заказа'
+            ),
+            openapi.Parameter(
+                'max_price', openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description='Максимальная цена заказа'
             ),
             openapi.Parameter(
                 'page', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='Номер страницы'
@@ -47,13 +66,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         Возвращает список заказов с фильтрацией и пагинацией.
         """
-        search = request.query_params.get('search', None)
-        queryset = self.queryset
-        if search:
-            queryset = queryset.filter(
-                Q(restaurant__name__icontains=search) & ~Q(total_price__lte=0)
-            )
-
+        queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)  # Применяем пагинацию
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -61,6 +74,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
 
     @swagger_auto_schema(
         operation_summary="Получить информацию о заказе по ID",
