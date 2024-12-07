@@ -116,6 +116,7 @@ class Order(models.Model):
         default='new',
         verbose_name="Статус заказа"
     )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     def update_total_price(self):
         """Обновляет общую стоимость заказа на основе позиций."""

@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 from rest_framework import viewsets, permissions, filters, status as status_code
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import action
 from ..models import Order
@@ -165,6 +168,81 @@ class OrderViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
+
+    # Функция для выборки заказов по условиям
+    def get_orders_for_status_or_time(self):
+        one_hour_ago = timezone.now() - timedelta(hours=1)
+
+        # Используем Q для фильтрации
+        orders = self.queryset.filter(
+            Q(status='preparing') | (Q(order_date__lt=one_hour_ago) & ~Q(status='completed'))
+        )
+        return orders
+
+    @swagger_auto_schema(
+        operation_summary="Получить заказы, которые готовятся или старше 1 часа и не доставлены",
+        responses={200: OrderSerializer(many=True)},
+    )
+    @action(methods=['GET'], detail=False, url_path='ready-or-past-due')
+    def get_ready_or_past_due_orders(self, request):
+        """
+        Возвращает заказы, которые готовятся или прошли больше 1 часа и не доставлены.
+        """
+        orders = self.get_orders_for_status_or_time()
+        page = self.paginate_queryset(orders)  # Применяем пагинацию
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
+
+        # Функция для изменения статуса заказов
+    def change_status_for_orders(self, status_new):
+        one_hour_ago = timezone.now() - timedelta(hours=1)
+
+        # Выбираем все заказы, где прошло больше 1 часа и статус не 'completed'
+        orders = self.queryset.filter(
+            Q(order_date__lt=one_hour_ago) & ~Q(status='completed')
+        )
+
+        # Изменяем статус для выбранных заказов
+        orders.update(status=status_new)
+        return orders
+
+    @swagger_auto_schema(
+        operation_summary="Изменить статус для заказов старше 1 часа",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'status': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Новый статус для заказов ('delivered')"
+                )
+            },
+        ),
+        responses={200: OrderSerializer(many=True), 400: openapi.Response("Ошибка валидации данных")},
+    )
+    @action(methods=['POST'], detail=False, url_path='change-status')
+    def change_status(self, request):
+        """
+        Меняет статус заказов старше 1 часа на новый.
+        """
+        status_new = request.data.get('status')
+        if not status_new:
+            return Response({"error": "Параметр 'status' обязателен."}, status=status_code.HTTP_400_BAD_REQUEST)
+
+        # Проверка, что статус валиден
+        valid_statuses = ['delivered', 'cancelled', 'preparing', 'new']
+        if status_new not in valid_statuses:
+            return Response({"error": "Неверный статус."}, status=status_code.HTTP_400_BAD_REQUEST)
+
+        # Меняем статус заказов
+        orders = self.change_status_for_orders(status_new)
+
+        # Сериализуем измененные заказы
         serializer = self.get_serializer(orders, many=True)
         return Response(serializer.data)
 
