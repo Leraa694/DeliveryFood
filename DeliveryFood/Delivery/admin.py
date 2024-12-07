@@ -3,9 +3,10 @@ from .models import User, Restaurant, MenuItem, Order, TypeCuisine, OrderMenuIte
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 from django.utils.html import format_html
+from import_export.formats.base_formats import XLSX, CSV, JSON
 from django.urls import reverse
 from simple_history.admin import SimpleHistoryAdmin
-
+from .resources import CompletedOrderResource, MenuItemResource, UserResource
 
 class OrderMenuItemInline(admin.TabularInline):
     model = OrderMenuItem
@@ -33,30 +34,10 @@ class OrderMenuItemInline(admin.TabularInline):
                 kwargs["queryset"] = MenuItem.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-class OrderResource(resources.ModelResource):
-    class Meta:
-        model = Order
-        fields = ('id', 'user__username', 'restaurant__name', 'order_date', 'total_price', 'status')
-
-    def get_export_queryset(self, queryset, *args, **kwargs):
-        return queryset.filter(status='completed')
-
-    def dehydrate_status(self, order):
-        status_mapping = {
-            'new': 'Новый',
-            'preparing': 'Готовится',
-            'delivering': 'Доставляется',
-            'completed': 'Завершен',
-        }
-        return status_mapping.get(order.status, 'Неизвестный статус')
-
-    def dehydrate_user(self, order):
-        return f"{order.user.first_name} {order.user.last_name} ({order.user.username})"
-
 
 @admin.register(Order)
 class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
-    resource_class = OrderResource
+    resource_class = CompletedOrderResource
     list_display = ('id', 'user_link', 'restaurant', 'order_date', 'total_price', 'status', 'order_items_count')
     list_filter = ('status', 'restaurant')
     search_fields = ('user__username', 'restaurant__name')
@@ -65,6 +46,9 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
     raw_id_fields = ('user', 'restaurant')
     readonly_fields = ('total_price',)
     list_display_links = ('id', 'user_link')
+
+    def get_export_formats(self):
+        return [XLSX, CSV, JSON]
 
     def save_related(self, request, form, formsets, change):
         """Пересчет общей стоимости после сохранения связанных объектов."""
@@ -88,9 +72,13 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
 
 @admin.register(MenuItem)
 class MenuItemAdmin(SimpleHistoryAdmin):
+    resource_class = MenuItemResource
     list_display = ('name', 'price', 'is_available', 'restaurant_link')
     list_filter = ('is_available', 'restaurant')
     search_fields = ('name', 'description')
+
+    def get_export_formats(self):
+        return [XLSX, CSV, JSON]
 
     def restaurant_link(self, obj):
         app_label = obj.restaurant._meta.app_label
@@ -121,6 +109,7 @@ class RestaurantAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(SimpleHistoryAdmin):
+    resource_class = UserResource
     list_display = ('username', 'email', 'role', 'is_staff')
     list_filter = ('role', 'is_staff')
     search_fields = ('username', 'first_name', 'last_name', 'email')
