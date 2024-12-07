@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, filters, status
+from rest_framework import viewsets, permissions, filters, status as status_code
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
@@ -130,9 +130,36 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         user_id = request.query_params.get('user_id')
         if not user_id:
-            return Response({"error": "Параметр 'user_id' обязателен."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Параметр 'user_id' обязателен."}, status=status_code.HTTP_400_BAD_REQUEST)
 
         orders = self.queryset.filter(user__id=user_id)
+        page = self.paginate_queryset(orders)  # Применяем пагинацию
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        operation_summary="Получить заказы по статусу",
+        manual_parameters=[
+            openapi.Parameter('status', openapi.IN_PATH, type=openapi.TYPE_STRING,
+                              description="Статус заказа ('new', 'preparing', 'delivering', 'completed')",
+                              required=True)
+        ],
+        responses={200: OrderSerializer(many=True)},
+    )
+    @action(methods=['GET'], detail=False, url_path='status/(?P<status>[\w-]+)')
+    def search_by_status(self, request, status=None):
+        """
+        Возвращает заказы по статусу.
+        """
+        if not status:
+            return Response({"error": "Параметр 'status' обязателен."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Фильтруем заказы по статусу
+        orders = self.queryset.filter(status=status)
         page = self.paginate_queryset(orders)  # Применяем пагинацию
         if page is not None:
             serializer = self.get_serializer(page, many=True)
