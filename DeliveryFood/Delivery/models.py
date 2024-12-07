@@ -1,9 +1,6 @@
-from email.policy import default
-
-from Tools.scripts.cleanfuture import verbose
 from django.contrib.auth.models import AbstractUser
-from simple_history.models import HistoricalRecords
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 
 class User(AbstractUser):
@@ -11,16 +8,13 @@ class User(AbstractUser):
         ('client', 'Клиент'),
         ('courier', 'Курьер'),
         ('admin', 'Администратор'),
-        ('restaurant service', 'Сервис ресторана'),
+        ('restaurant_service', 'Сервис ресторана'),
     ]
 
-
-    # Поля, которых нет в AbstractUser
     phone = models.CharField(max_length=18, verbose_name="Номер телефона")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес пользователя")
     role = models.CharField(max_length=20, choices=ROLES, verbose_name="Роль пользователя")
 
-    # Задаем related_name для предотвращения конфликта
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='delivery_user_set',
@@ -43,21 +37,25 @@ class User(AbstractUser):
 
 
 class TypeCuisine(models.Model):
-    cuisine_type = models.CharField(max_length=20, verbose_name="Тип кухни")
+    name = models.CharField(max_length=50, verbose_name="Название типа кухни")
 
     def __str__(self):
-        return self.cuisine_type
+        return self.name
 
     class Meta:
         verbose_name = "Тип кухни"
         verbose_name_plural = "Типы кухонь"
 
-class Restaurant(models.Model):
 
+class Restaurant(models.Model):
     name = models.CharField(max_length=255, verbose_name="Название ресторана")
     address = models.TextField(verbose_name="Адрес ресторана")
     phone = models.CharField(max_length=15, verbose_name="Телефон ресторана")
-    restaurant = models.ManyToManyField(TypeCuisine, related_name='TypesCusineONRestaurant', verbose_name="Тип кухни")
+    cuisine_types = models.ManyToManyField(
+        TypeCuisine,
+        related_name='restaurants',
+        verbose_name="Типы кухни"
+    )
 
     def __str__(self):
         return self.name
@@ -65,12 +63,6 @@ class Restaurant(models.Model):
     class Meta:
         verbose_name = "Ресторан"
         verbose_name_plural = "Рестораны"
-
-
-# class TypesCusineONRestaurant(models.InlineModelAdmin):
-#
-#     IdTypeCusine = models.ForeignKey(TypeCusine, on_delete=models.CASCADE, verbose_name=('Тип кухни'))
-#     IdRestaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, verbose_name=('Ресторан'))
 
 
 class MenuItem(models.Model):
@@ -115,7 +107,9 @@ class Order(models.Model):
         verbose_name="Ресторан"
     )
     order_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата заказа")
-    total_price = models.DecimalField(max_digits=10, default=0, decimal_places=2, verbose_name="Общая стоимость")
+    total_price = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, verbose_name="Общая стоимость"
+    )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -123,40 +117,55 @@ class Order(models.Model):
         verbose_name="Статус заказа"
     )
 
+    def update_total_price(self):
+        """Обновляет общую стоимость заказа на основе позиций."""
+        self.total_price = sum(
+            item.price for item in self.order_items.all()
+        )
+
+    def save(self, *args, **kwargs):
+        """Переопределяем метод save для автоматического обновления общей стоимости."""
+        is_new = self.pk is None  # Проверяем, новый ли объект
+        super().save(*args, **kwargs)  # Сначала сохраняем объект
+        if not is_new:  # Обновляем общую стоимость только для существующих объектов
+            self.update_total_price()
+            super().save(*args, **kwargs)  # Сохраняем снова после обновления цены
+
     def __str__(self):
-        return f"Заказ {self.id} от {self.user.first_name}"
+        return f"Заказ {self.id} от {self.user.get_full_name()}"
 
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
 
 
-class OrderDetail(models.Model):
+
+class OrderMenuItem(models.Model):
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        related_name='order_details',
+        related_name='order_items',
         verbose_name="Заказ"
     )
-    menu_items = models.ManyToManyField(
+    menu_item = models.ForeignKey(
         MenuItem,
-        verbose_name="Блюда",
-        related_name='order_details'
+        on_delete=models.CASCADE,
+        related_name='order_items',
+        verbose_name="Блюдо"
     )
-    quantity = models.PositiveIntegerField(verbose_name="Количество")
-
-    def __str__(self):
-        return f"{self.quantity}x {self.menu_item.name}"
+    quantity = models.PositiveIntegerField(verbose_name="Количество", default=1)
 
     @property
     def price(self):
-        """Вычисляет стоимость позиции на основе цены из MenuItem."""
+        """Вычисляет стоимость позиции на основе цены блюда."""
         return self.menu_item.price * self.quantity
 
-    class Meta:
-        verbose_name = "Деталь заказа"
-        verbose_name_plural = "Детали заказов"
+    def __str__(self):
+        return f"{self.quantity}x {self.menu_item.name} для заказа {self.order.id}"
 
+    class Meta:
+        verbose_name = "Позиция в заказе"
+        verbose_name_plural = "Позиции в заказе"
 
 
 class Courier(models.Model):
@@ -179,7 +188,7 @@ class Courier(models.Model):
     )
 
     def __str__(self):
-        return f"Курьер {self.user.first_name}"
+        return f"Курьер {self.user.get_full_name()}"
 
     class Meta:
         verbose_name = "Курьер"
@@ -213,7 +222,7 @@ class Delivery(models.Model):
     )
 
     def __str__(self):
-        return f"Доставка {self.id} для заказа {self.order.id}"
+        return f"Доставка для заказа {self.order.id}"
 
     class Meta:
         verbose_name = "Доставка"

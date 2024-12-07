@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Restaurant, MenuItem, Order, TypeCuisine, OrderDetail, Courier, Delivery
+from .models import User, Restaurant, MenuItem, Order, TypeCuisine, OrderMenuItem, Courier, Delivery
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 from django.utils.html import format_html
@@ -7,21 +7,31 @@ from django.urls import reverse
 from simple_history.admin import SimpleHistoryAdmin
 
 
-class OrderDetailInline(admin.TabularInline):
-    model = OrderDetail
-    extra = 0
-    readonly_fields = ('menu_item_link', 'quantity', 'price')
-    fields = ('menu_item_link', 'quantity', 'price')
+class OrderMenuItemInline(admin.TabularInline):
+    model = OrderMenuItem
+    extra = 1
+    fields = ('menu_item', 'quantity', 'price')
+    readonly_fields = ('price',)
 
-    def menu_item_link(self, obj):
-        if obj.menu_item:
-            app_label = obj.menu_item._meta.app_label
-            model_name = obj.menu_item._meta.model_name
-            link = reverse(f"admin:{app_label}_{model_name}_change", args=[obj.menu_item.id])
-            return format_html('<a href="{}">{}</a>', link, obj.menu_item.name)
-        return "Нет данных"
-    menu_item_link.short_description = 'Блюдо'
+    @admin.display(description='Цена')
+    def price(self, obj):
+        return obj.price if obj.id else "-"
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "menu_item":
+            # Получаем ID заказа из текущего URL
+            order_id = request.resolver_match.kwargs.get("object_id")
+            if order_id:
+                try:
+                    # Находим заказ и фильтруем меню по ресторану
+                    order = Order.objects.get(pk=order_id)
+                    kwargs["queryset"] = MenuItem.objects.filter(restaurant=order.restaurant)
+                except Order.DoesNotExist:
+                    pass
+            else:
+                # Если заказ еще не сохранен, показываем пустой QuerySet
+                kwargs["queryset"] = MenuItem.objects.none()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 class OrderResource(resources.ModelResource):
     class Meta:
@@ -47,14 +57,19 @@ class OrderResource(resources.ModelResource):
 @admin.register(Order)
 class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
     resource_class = OrderResource
-    list_display = ('id', 'user_link', 'restaurant', 'order_date', 'total_price', 'status', 'order_details_count')
+    list_display = ('id', 'user_link', 'restaurant', 'order_date', 'total_price', 'status', 'order_items_count')
     list_filter = ('status', 'restaurant')
     search_fields = ('user__username', 'restaurant__name')
     date_hierarchy = 'order_date'
-    inlines = [OrderDetailInline]
+    inlines = [OrderMenuItemInline]
     raw_id_fields = ('user', 'restaurant')
     readonly_fields = ('total_price',)
     list_display_links = ('id', 'user_link')
+
+    def save_related(self, request, form, formsets, change):
+        """Пересчет общей стоимости после сохранения связанных объектов."""
+        super().save_related(request, form, formsets, change)
+        form.instance.update_total_price()
 
     def user_link(self, obj):
         app_label = obj.user._meta.app_label
@@ -64,8 +79,8 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
     user_link.short_description = 'Пользователь'
 
     @admin.display(description='Количество позиций')
-    def order_details_count(self, obj):
-        return obj.order_details.count()
+    def order_items_count(self, obj):
+        return obj.order_items.count()
 
     def get_export_queryset(self, request):
         return super().get_queryset(request).filter(status='completed')
@@ -84,23 +99,23 @@ class MenuItemAdmin(SimpleHistoryAdmin):
         return format_html('<a href="{}">{}</a>', link, obj.restaurant.name)
     restaurant_link.short_description = 'Ресторан'
 
+
 @admin.register(TypeCuisine)
-class TypeCusineAdmin(admin.ModelAdmin):
-    list_display = ('cuisine_type',)  # Отображаем тип кухни и количество ресторанов
-    search_fields = ('cuisine_type',)  # Поиск по названию типа кухни
-    list_filter = ('cuisine_type',)  # Фильтр по типу кухни (если добавите дополнительные поля)
-    ordering = ('cuisine_type',)  # Сортировка по названию типа кухни
+class TypeCuisineAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+    list_filter = ('name',)
+    ordering = ('name',)
+
 
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'get_cuisines')  # Добавляем отображение типов кухни
-    search_fields = ('name', 'phone')  # Расширяем поиск по телефону
-    list_filter = ('restaurant',)  # Фильтр по типам кухни
-    filter_horizontal = ('restaurant',)  # Удобный выбор типов кухни
+    list_display = ('name', 'phone', 'get_cuisines')
+    search_fields = ('name', 'phone')
+    list_filter = ('name',)  # Используйте существующие поля
 
-    # Метод для отображения связанных типов кухни
     def get_cuisines(self, obj):
-        return ", ".join([cuisine.cuisine_type for cuisine in obj.restaurant.all()])
+        return ", ".join([cuisine.name for cuisine in obj.cuisine_types.all()])
     get_cuisines.short_description = "Типы кухни"
 
 
@@ -113,6 +128,7 @@ class UserAdmin(SimpleHistoryAdmin):
     list_display_links = ('username',)
     filter_horizontal = ('groups', 'user_permissions')
 
+
 @admin.register(Courier)
 class CourierAdmin(SimpleHistoryAdmin):
     list_display = ('user', 'vehicle_type')
@@ -124,6 +140,3 @@ class DeliveryAdmin(SimpleHistoryAdmin):
     list_display = ('order', 'courier', 'delivery_time', 'delivery_status')
     list_filter = ('delivery_status',)
     search_fields = ('order__id', 'courier__user__username')
-
-
-admin.site.register(OrderDetail)

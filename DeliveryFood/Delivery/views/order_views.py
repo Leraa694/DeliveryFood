@@ -9,8 +9,6 @@ from ..models import Order
 from ..serializers.order_serializers import OrderSerializer
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
 from django_filters import CharFilter, NumberFilter
-from rest_framework.pagination import PageNumberPagination
-
 
 # Кастомный класс фильтрации (если нужен)
 class OrderFilter(FilterSet):
@@ -38,28 +36,21 @@ class OrderViewSet(viewsets.ModelViewSet):
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = OrderFilter  # Подключаем кастомный фильтр
     pagination_class = StandardResultsSetPagination
+    ordering_fields = ['order_date', 'total_price']
+    ordering = ['order_date']
 
     @swagger_auto_schema(
         operation_summary="Получить список заказов с фильтрацией и пагинацией",
         manual_parameters=[
-            openapi.Parameter(
-                'restaurant_name', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Название ресторана'
-            ),
-            openapi.Parameter(
-                'min_price', openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description='Минимальная цена заказа'
-            ),
-            openapi.Parameter(
-                'max_price', openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description='Максимальная цена заказа'
-            ),
-            openapi.Parameter(
-                'page', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='Номер страницы'
-            ),
-            openapi.Parameter(
-                'page_size', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='Размер страницы'
-            ),
+            openapi.Parameter('restaurant_name', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Название ресторана'),
+            openapi.Parameter('min_price', openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description='Минимальная цена заказа'),
+            openapi.Parameter('max_price', openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description='Максимальная цена заказа'),
+            openapi.Parameter('page', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='Номер страницы'),
+            openapi.Parameter('page_size', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='Размер страницы'),
+            openapi.Parameter('ordering', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Параметр сортировки (например, order_date или total_price)'),
         ]
     )
     def list(self, request, *args, **kwargs):
@@ -75,13 +66,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-
     @swagger_auto_schema(
         operation_summary="Получить информацию о заказе по ID",
-        responses={
-            200: OrderSerializer(),
-            404: openapi.Response("Заказ не найден"),
-        },
+        responses={200: OrderSerializer(), 404: openapi.Response("Заказ не найден")},
     )
     def retrieve(self, request, *args, **kwargs):
         """
@@ -92,10 +79,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         operation_summary="Создать новый заказ",
         request_body=OrderSerializer,
-        responses={
-            201: OrderSerializer(),
-            400: openapi.Response("Ошибка валидации данных"),
-        },
+        responses={201: OrderSerializer(), 400: openapi.Response("Ошибка валидации данных")},
     )
     def create(self, request, *args, **kwargs):
         """
@@ -105,10 +89,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @swagger_auto_schema(
         operation_summary="Удалить заказ по ID",
-        responses={
-            204: openapi.Response("Заказ успешно удален"),
-            404: openapi.Response("Заказ не найден"),
-        },
+        responses={204: openapi.Response("Заказ успешно удален"), 404: openapi.Response("Заказ не найден")},
     )
     def destroy(self, request, *args, **kwargs):
         """
@@ -127,10 +108,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 )
             },
         ),
-        responses={
-            200: OrderSerializer(),
-            400: openapi.Response("Ошибка валидации данных"),
-        },
+        responses={200: OrderSerializer(), 400: openapi.Response("Ошибка валидации данных")},
     )
     def partial_update(self, request, *args, **kwargs):
         """
@@ -141,9 +119,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         operation_summary="Получить заказы определенного пользователя",
         manual_parameters=[
-            openapi.Parameter(
-                'user_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='ID пользователя'
-            ),
+            openapi.Parameter('user_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='ID пользователя'),
         ],
         responses={200: OrderSerializer(many=True)},
     )
@@ -164,3 +140,4 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(orders, many=True)
         return Response(serializer.data)
+

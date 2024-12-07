@@ -1,20 +1,8 @@
 from rest_framework import serializers
-from ..models import Order, OrderDetail
+from ..models import Order
 
-class OrderDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderDetail
-        fields = '__all__'
-
-    # Валидация на количество
-    def validate_quantity(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Количество не может быть меньше или равно нулю.")
-        return value
 
 class OrderSerializer(serializers.ModelSerializer):
-    order_details = OrderDetailSerializer(many=True, read_only=True)
-
     class Meta:
         model = Order
         fields = '__all__'
@@ -32,9 +20,21 @@ class OrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Статус заказа должен быть одним из: {', '.join(valid_statuses)}.")
         return value
 
-    # Дополнительная валидация, если требуется
+    # Дополнительная валидация
     def validate(self, data):
-        # Например, если статус "completed", то проверим, что есть детали заказа
-        if data['status'] == 'completed' and not data['order_details']:
-            raise serializers.ValidationError("Для статуса 'completed' должны быть добавлены детали заказа.")
+        # Если статус "completed", проверим, что заказ имеет допустимую цену
+        if data.get('status') == 'completed' and data.get('total_price', 0) <= 0:
+            raise serializers.ValidationError("Для статуса 'completed' общая стоимость должна быть положительной.")
         return data
+
+    def create(self, validated_data):
+        # Создаём заказ без деталей
+        order = Order.objects.create(**validated_data)
+        return order
+
+    def update(self, instance, validated_data):
+        # Обновляем основные данные заказа
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
