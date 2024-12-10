@@ -8,8 +8,8 @@ from drf_yasg import openapi
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import action
-from ..models import Order
-from ..serializers.order_serializers import OrderSerializer
+from ..models import Order, OrderMenuItem
+from ..serializers.order_serializers import OrderSerializer, OrderMenuItemSerializer
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
 from django_filters import CharFilter, NumberFilter
 
@@ -246,3 +246,44 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(orders, many=True)
         return Response(serializer.data)
 
+class OrderMenuItemViewSet(viewsets.ModelViewSet):
+    queryset = OrderMenuItem.objects.all()
+    serializer_class = OrderMenuItemSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['order__id', 'menu_item__name']
+    pagination_class = StandardResultsSetPagination
+
+    @swagger_auto_schema(operation_summary="Получить список позиций в заказах")
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        operation_summary="Получить позиции по заказу",
+        manual_parameters=[
+            openapi.Parameter('order_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='ID заказа'),
+        ],
+    )
+    @action(methods=['GET'], detail=False, url_path='by-order')
+    def items_by_order(self, request):
+        """
+        Возвращает позиции, связанные с определённым заказом.
+        """
+        order_id = request.query_params.get('order_id')
+        if not order_id:
+            return Response({"error": "Параметр 'order_id' обязателен."}, status=status_code.HTTP_400_BAD_REQUEST)
+
+        items = self.queryset.filter(order__id=order_id)
+        page = self.paginate_queryset(items)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(items, many=True)
+        return Response(serializer.data)

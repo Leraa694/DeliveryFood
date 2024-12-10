@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import Order
+from ..models import Order, OrderMenuItem
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -38,3 +38,19 @@ class OrderSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class OrderMenuItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderMenuItem
+        fields = '__all__'
+
+    def validate_quantity(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Количество должно быть больше нуля.")
+        return value
+
+    def validate(self, data):
+        if data['menu_item'].restaurant != data['order'].restaurant:
+            raise serializers.ValidationError("Ресторан блюда должен совпадать с рестораном заказа.")
+        return data
