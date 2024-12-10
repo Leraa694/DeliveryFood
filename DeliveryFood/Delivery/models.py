@@ -10,7 +10,7 @@ class User(AbstractUser):
         ('admin', 'Администратор'),
         ('restaurant_service', 'Сервис ресторана'),
     ]
-
+    history = HistoricalRecords()
     phone = models.CharField(max_length=18, verbose_name="Номер телефона")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес пользователя")
     role = models.CharField(max_length=20, choices=ROLES, verbose_name="Роль пользователя")
@@ -50,7 +50,7 @@ class TypeCuisine(models.Model):
 class Restaurant(models.Model):
     name = models.CharField(max_length=255, verbose_name="Название ресторана")
     address = models.TextField(verbose_name="Адрес ресторана")
-    phone = models.CharField(max_length=15, verbose_name="Телефон ресторана")
+    phone = models.CharField(max_length=18, verbose_name="Телефон ресторана")
     cuisine_types = models.ManyToManyField(
         TypeCuisine,
         related_name='restaurants',
@@ -66,6 +66,7 @@ class Restaurant(models.Model):
 
 
 class MenuItem(models.Model):
+    history = HistoricalRecords()
     name = models.CharField(max_length=255, verbose_name="Название блюда")
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
     description = models.TextField(blank=True, null=True, verbose_name="Описание блюда")
@@ -78,7 +79,7 @@ class MenuItem(models.Model):
     is_available = models.BooleanField(default=True, verbose_name="Доступно ли блюдо")
 
     def __str__(self):
-        return self.name
+        return f"Блюдо {self.name} из ресторана {self.restaurant.name}"
 
     class Meta:
         verbose_name = "Блюдо"
@@ -133,7 +134,7 @@ class Order(models.Model):
             super().save(*args, **kwargs)  # Сохраняем снова после обновления цены
 
     def __str__(self):
-        return f"Заказ {self.id} от {self.user.get_full_name()}"
+        return f"Заказ {self.id} от {self.user.get_full_name()} из ресторана {self.restaurant.name}"
 
     class Meta:
         verbose_name = "Заказ"
@@ -142,6 +143,8 @@ class Order(models.Model):
 
 
 class OrderMenuItem(models.Model):
+    history = HistoricalRecords()
+
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
@@ -170,6 +173,7 @@ class OrderMenuItem(models.Model):
 
 
 class Courier(models.Model):
+    history = HistoricalRecords()
     VEHICLE_CHOICES = [
         ('bike', 'Велосипед'),
         ('car', 'Машина'),
@@ -197,6 +201,7 @@ class Courier(models.Model):
 
 
 class Delivery(models.Model):
+    history = HistoricalRecords()
     STATUS_CHOICES = [
         ('in_progress', 'В процессе'),
         ('delivered', 'Доставлено'),
