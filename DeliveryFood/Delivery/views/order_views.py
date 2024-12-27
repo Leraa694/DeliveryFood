@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import action
 from ..models import Order, OrderMenuItem
+from django.core.cache import cache
 from ..serializers.order_serializers import OrderSerializer, OrderMenuItemSerializer
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
 from django_filters import CharFilter, NumberFilter
@@ -38,111 +39,77 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 
 class OrderViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet для работы с заказами.
-    """
-
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_class = OrderFilter  # Подключаем кастомный фильтр
+    filterset_class = OrderFilter
     pagination_class = StandardResultsSetPagination
     ordering_fields = ["order_date", "total_price"]
     ordering = ["order_date"]
-    filterset_fields = ["restaurant_name"]
 
     @swagger_auto_schema(
-        operation_summary="Получить список заказов с фильтрацией и пагинацией",
+        operation_summary="Get a list of orders with filters and pagination",
         manual_parameters=[
-            openapi.Parameter(
-                "restaurant_name",
-                openapi.IN_QUERY,
-                type=openapi.TYPE_STRING,
-                description="Название ресторана",
-            ),
-            openapi.Parameter(
-                "min_price",
-                openapi.IN_QUERY,
-                type=openapi.TYPE_NUMBER,
-                description="Минимальная цена заказа",
-            ),
-            openapi.Parameter(
-                "max_price",
-                openapi.IN_QUERY,
-                type=openapi.TYPE_NUMBER,
-                description="Максимальная цена заказа",
-            ),
-            openapi.Parameter(
-                "page",
-                openapi.IN_QUERY,
-                type=openapi.TYPE_INTEGER,
-                description="Номер страницы",
-            ),
-            openapi.Parameter(
-                "page_size",
-                openapi.IN_QUERY,
-                type=openapi.TYPE_INTEGER,
-                description="Размер страницы",
-            ),
-            openapi.Parameter(
-                "ordering",
-                openapi.IN_QUERY,
-                type=openapi.TYPE_STRING,
-                description="Параметр сортировки (например, order_date или total_price)",
-            ),
+            openapi.Parameter("restaurant_name", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="Restaurant name"),
+            openapi.Parameter("min_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description="Minimum order price"),
+            openapi.Parameter("max_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description="Maximum order price"),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description="Page number"),
+            openapi.Parameter("page_size", openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description="Page size"),
+            openapi.Parameter("ordering", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="Sorting parameter"),
         ],
     )
     def list(self, request, *args, **kwargs):
         """
-        Возвращает список заказов с фильтрацией и пагинацией.
+        Returns a list of orders with filters, pagination, and caching.
         """
+        cache_key = f"orders_{request.query_params.urlencode()}"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response(cached_data, status=status_code.HTTP_203_NON_AUTHORITATIVE_INFORMATION)
+
         queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)  # Применяем пагинацию
+        page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(
-                serializer.data
-            )  # Возвращаем пагинированный ответ
+            response_data = self.get_paginated_response(serializer.data).data
+            cache.set(cache_key, response_data, timeout=60 * 10)  # Cache for 15 minutes
+            return Response(response_data)
 
         serializer = self.get_serializer(queryset, many=True)
+        cache.set(cache_key, serializer.data, timeout=60 * 10)
         return Response(serializer.data)
 
-    @swagger_auto_schema(
-        operation_summary="Получить информацию о заказе по ID",
-        responses={200: OrderSerializer(), 404: openapi.Response("Заказ не найден")},
-    )
-    def retrieve(self, request, *args, **kwargs):
-        """
-        Возвращает информацию о конкретном заказе по ID.
-        """
-        return super().retrieve(request, *args, **kwargs)
-
-    @swagger_auto_schema(
-        operation_summary="Создать новый заказ",
-        request_body=OrderSerializer,
-        responses={
-            201: OrderSerializer(),
-            400: openapi.Response("Ошибка валидации данных"),
-        },
-    )
     def create(self, request, *args, **kwargs):
         """
-        Создает новый заказ.
+        Create a new order and clear the order list cache.
         """
-        return super().create(request, *args, **kwargs)
+        response = super().create(request, *args, **kwargs)
+        if response.status_code == 201:
+            cache.delete_pattern("orders_*")  # Clear all cached order lists
+        return response
 
-    @swagger_auto_schema(
-        operation_summary="Удалить заказ по ID",
-        responses={
-            204: openapi.Response("Заказ успешно удален"),
-            404: openapi.Response("Заказ не найден"),
-        },
-    )
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Partially update an order and clear related cache.
+        """
+        instance_id = kwargs.get("pk")
+        response = super().partial_update(request, *args, **kwargs)
+        if response.status_code == 200:
+            cache.delete_pattern("orders_*")
+            cache.delete(f"order_{instance_id}")
+        return response
+
     def destroy(self, request, *args, **kwargs):
         """
-        Удаляет заказ по ID.
+        Delete an order and clear related cache.
         """
-        return super().destroy(request, *args, **kwargs)
+        instance_id = kwargs.get("pk")
+        response = super().destroy(request, *args, **kwargs)
+        if response.status_code == 204:
+            cache.delete_pattern("orders_*")
+            cache.delete(f"order_{instance_id}")
+        return response
 
     @swagger_auto_schema(
         operation_summary="Обновить статус заказа",
