@@ -44,6 +44,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     ordering_fields = ['order_date', 'total_price']
     ordering = ['order_date']
+    filterset_fields = ["restaurant_name"]
 
     @swagger_auto_schema(
         operation_summary="Получить список заказов с фильтрацией и пагинацией",
