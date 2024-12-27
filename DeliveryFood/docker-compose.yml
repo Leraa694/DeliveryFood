@@ -1,0 +1,62 @@
+version: '3.9'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: delivery-food-cont
+    command: >
+      sh -c "python manage.py makemigrations && python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:6
+    container_name: redis-cont
+    restart: always
+    ports:
+      - "6379:6379"
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog-cont
+    ports:
+      - "8025:8025"
+    environment:
+      MH_STORAGE: "maildir"
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-cont
+    command: celery -A InterviewHub worker --loglevel=info
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - EMAIL_HOST=mailhog
+      - EMAIL_PORT=1025
+    volumes:
+      - .:/app
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-beat-cont
+    command: celery -A InterviewHub beat --loglevel=info
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - EMAIL_HOST=mailhog
+      - EMAIL_PORT=1025
+    volumes:
+      - .:/app
