@@ -157,4 +157,30 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'mailhog'
+EMAIL_PORT = 1025
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = False
+
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",  # Используем бэкенд для Redis
+        "LOCATION": "redis://redis:6379/1",  # URL подключения к Redis (номер базы 1)
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "TIMEOUT": 60 * 10,  # Тайм-аут кэша (10 минут)
+    }
+}
