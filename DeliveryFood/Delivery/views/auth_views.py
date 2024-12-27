@@ -15,17 +15,20 @@ class AuthViewSet(viewsets.ViewSet):
     """
     ViewSet для регистрации и управления токенами.
     """
+
     permission_classes = [permissions.AllowAny]
 
     @swagger_auto_schema(
         operation_summary="Регистрация нового пользователя",
         request_body=UserSerializer,
         responses={
-            201: openapi.Response("Пользователь успешно зарегистрирован", UserSerializer),
+            201: openapi.Response(
+                "Пользователь успешно зарегистрирован", UserSerializer
+            ),
             400: openapi.Response("Ошибка валидации"),
         },
     )
-    @action(methods=['POST'], detail=False, url_path='register')
+    @action(methods=["POST"], detail=False, url_path="register")
     def register(self, request):
         """
         Регистрация нового пользователя.
@@ -34,7 +37,10 @@ class AuthViewSet(viewsets.ViewSet):
         if serializer.is_valid():
             user = serializer.save()
             return Response(
-                {"message": "Пользователь успешно зарегистрирован", "user": UserSerializer(user).data},
+                {
+                    "message": "Пользователь успешно зарегистрирован",
+                    "user": UserSerializer(user).data,
+                },
                 status=status.HTTP_201_CREATED,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -43,7 +49,7 @@ class AuthViewSet(viewsets.ViewSet):
         operation_summary="Выход (аннулирование токенов)",
         responses={200: openapi.Response("Токены успешно аннулированы")},
     )
-    @action(methods=['POST'], detail=False, url_path='logout')
+    @action(methods=["POST"], detail=False, url_path="logout")
     def logout(self, request):
         """
         Выход пользователя. Аннулирует токены.
@@ -52,22 +58,32 @@ class AuthViewSet(viewsets.ViewSet):
             refresh_token = request.data.get("refresh_token")
             token = RefreshToken(refresh_token)
             token.blacklist()  # Требуется настройка Blacklist в SimpleJWT
-            return Response({"message": "Вы успешно вышли из системы."}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "Вы успешно вышли из системы."}, status=status.HTTP_200_OK
+            )
         except Exception as e:
-            return Response({"error": "Некорректный токен или ошибка при аннулировании."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Некорректный токен или ошибка при аннулировании."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     Представление для получения пары токенов: access и refresh.
     """
+
     @swagger_auto_schema(
         operation_summary="Получить JWT токены (access и refresh)",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'username': openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя"),
-                'password': openapi.Schema(type=openapi.TYPE_STRING, description="Пароль"),
+                "username": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="Имя пользователя"
+                ),
+                "password": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="Пароль"
+                ),
             },
         ),
         responses={
@@ -76,8 +92,12 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'refresh': openapi.Schema(type=openapi.TYPE_STRING, description="Refresh токен"),
-                        'access': openapi.Schema(type=openapi.TYPE_STRING, description="Access токен"),
+                        "refresh": openapi.Schema(
+                            type=openapi.TYPE_STRING, description="Refresh токен"
+                        ),
+                        "access": openapi.Schema(
+                            type=openapi.TYPE_STRING, description="Access токен"
+                        ),
                     },
                 ),
             ),
@@ -95,12 +115,15 @@ class CustomTokenRefreshView(TokenRefreshView):
     """
     Представление для обновления токена.
     """
+
     @swagger_auto_schema(
         operation_summary="Обновить токен",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'refresh': openapi.Schema(type=openapi.TYPE_STRING, description="Refresh токен"),
+                "refresh": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="Refresh токен"
+                ),
             },
         ),
         responses={
@@ -109,7 +132,9 @@ class CustomTokenRefreshView(TokenRefreshView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'access': openapi.Schema(type=openapi.TYPE_STRING, description="Access токен"),
+                        "access": openapi.Schema(
+                            type=openapi.TYPE_STRING, description="Access токен"
+                        ),
                     },
                 ),
             ),

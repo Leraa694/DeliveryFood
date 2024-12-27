@@ -12,19 +12,24 @@ from rest_framework.decorators import action
 from ..models import Courier, Delivery
 from ..serializers.courier_serializers import CourierSerializer, DeliverySerializer
 
+
 class StandardResultsSetPagination(PageNumberPagination):
     """
     Кастомная пагинация для стандартного набора результатов.
     """
+
     page_size = 10  # Количество элементов на странице по умолчанию
-    page_size_query_param = 'page_size'  # Параметр для задания размера страницы через запрос
+    page_size_query_param = (
+        "page_size"  # Параметр для задания размера страницы через запрос
+    )
     max_page_size = 100  # Максимальное количество элементов на странице
+
 
 class CourierViewSet(viewsets.ModelViewSet):
     queryset = Courier.objects.all()
     serializer_class = CourierSerializer
     filter_backends = [filters.SearchFilter]
-    search_fields = ['user__username', 'user__first_name', 'user__last_name']
+    search_fields = ["user__username", "user__first_name", "user__last_name"]
 
     @swagger_auto_schema(operation_summary="Получить список курьеров")
     def list(self, request, *args, **kwargs):
@@ -41,17 +46,25 @@ class CourierViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         operation_summary="Получить курьеров по типу транспорта",
         manual_parameters=[
-            openapi.Parameter('vehicle_type', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Тип транспорта курьера'),
+            openapi.Parameter(
+                "vehicle_type",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                description="Тип транспорта курьера",
+            ),
         ],
     )
-    @action(methods=['GET'], detail=False, url_path='by-vehicle-type')
+    @action(methods=["GET"], detail=False, url_path="by-vehicle-type")
     def couriers_by_vehicle_type(self, request):
         """
         Возвращает курьеров, у которых указан определённый тип транспорта.
         """
-        vehicle_type = request.query_params.get('vehicle_type')
+        vehicle_type = request.query_params.get("vehicle_type")
         if not vehicle_type:
-            return Response({"error": "Параметр 'vehicle_type' обязателен."}, status=status_code.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Параметр 'vehicle_type' обязателен."},
+                status=status_code.HTTP_400_BAD_REQUEST,
+            )
 
         couriers = self.queryset.filter(vehicle_type=vehicle_type)
         page = self.paginate_queryset(couriers)
@@ -66,40 +79,42 @@ class CourierViewSet(viewsets.ModelViewSet):
         operation_summary="Фильтрация курьеров по условиям",
         manual_parameters=[
             openapi.Parameter(
-                'vehicle_type',
+                "vehicle_type",
                 openapi.IN_QUERY,
                 description="Типы транспорта через запятую (например, 'bike,car')",
                 type=openapi.TYPE_STRING,
-                require=True
+                require=True,
             ),
             openapi.Parameter(
-                'first_name_starts_with',
+                "first_name_starts_with",
                 openapi.IN_QUERY,
                 description="Имя пользователя, начинающееся с указанной буквы",
                 type=openapi.TYPE_STRING,
-                require=True
+                require=True,
             ),
             openapi.Parameter(
-                'exclude_last_name_contains',
+                "exclude_last_name_contains",
                 openapi.IN_QUERY,
                 description="Исключить пользователей с фамилией, содержащей указанное значение",
                 type=openapi.TYPE_STRING,
-                require=True
-            )
+                require=True,
+            ),
         ],
         responses={
             200: CourierSerializer(many=True),
-            400: openapi.Response("Ошибка валидации параметров")
-        }
+            400: openapi.Response("Ошибка валидации параметров"),
+        },
     )
-    @action(methods=['GET'], detail=False, url_path='filtered-couriers')
+    @action(methods=["GET"], detail=False, url_path="filtered-couriers")
     def filtered_couriers(self, request):
         """
         Фильтрация курьеров на основе нескольких критериев.
         """
-        vehicle_types = request.query_params.get('vehicle_type')
-        first_name_starts_with = request.query_params.get('first_name_starts_with')
-        exclude_last_name_contains = request.query_params.get('exclude_last_name_contains')
+        vehicle_types = request.query_params.get("vehicle_type")
+        first_name_starts_with = request.query_params.get("first_name_starts_with")
+        exclude_last_name_contains = request.query_params.get(
+            "exclude_last_name_contains"
+        )
 
         # Базовый фильтр без условий
         vehicle_filter = Q()
@@ -131,11 +146,12 @@ class CourierViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(couriers, many=True)
         return Response(serializer.data, status=status_code.HTTP_200_OK)
 
+
 class DeliveryViewSet(viewsets.ModelViewSet):
     queryset = Delivery.objects.all()
     serializer_class = DeliverySerializer
     filter_backends = [filters.SearchFilter]
-    search_fields = ['order__id', 'courier__user__username']
+    search_fields = ["order__id", "courier__user__username"]
     pagination_class = StandardResultsSetPagination
 
     @swagger_auto_schema(operation_summary="Получить список доставок")
@@ -153,17 +169,25 @@ class DeliveryViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         operation_summary="Получить доставки по статусу",
         manual_parameters=[
-            openapi.Parameter('delivery_status', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Статус доставки'),
+            openapi.Parameter(
+                "delivery_status",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                description="Статус доставки",
+            ),
         ],
     )
-    @action(methods=['GET'], detail=False, url_path='by-status')
+    @action(methods=["GET"], detail=False, url_path="by-status")
     def deliveries_by_status(self, request):
         """
         Возвращает доставки с указанным статусом.
         """
-        delivery_status = request.query_params.get('delivery_status')
+        delivery_status = request.query_params.get("delivery_status")
         if not delivery_status:
-            return Response({"error": "Параметр 'delivery_status' обязателен."}, status=status_code.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Параметр 'delivery_status' обязателен."},
+                status=status_code.HTTP_400_BAD_REQUEST,
+            )
 
         deliveries = self.queryset.filter(delivery_status=delivery_status)
         page = self.paginate_queryset(deliveries)
@@ -179,31 +203,38 @@ class DeliveryViewSet(viewsets.ModelViewSet):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'delivery_status': openapi.Schema(
+                "delivery_status": openapi.Schema(
                     type=openapi.TYPE_STRING,
-                    description="Новый статус доставки ('in_progress', 'delivered')"
+                    description="Новый статус доставки ('in_progress', 'delivered')",
                 )
             },
         ),
-        responses={200: DeliverySerializer(many=True), 400: openapi.Response("Ошибка валидации данных")},
+        responses={
+            200: DeliverySerializer(many=True),
+            400: openapi.Response("Ошибка валидации данных"),
+        },
     )
-    @action(methods=['POST'], detail=False, url_path='change-status')
+    @action(methods=["POST"], detail=False, url_path="change-status")
     def change_delivery_status(self, request):
         """
         Меняет статус доставок на новый.
         """
-        delivery_status = request.data.get('delivery_status')
+        delivery_status = request.data.get("delivery_status")
         if not delivery_status:
-            return Response({"error": "Параметр 'delivery_status' обязателен."}, status=status_code.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Параметр 'delivery_status' обязателен."},
+                status=status_code.HTTP_400_BAD_REQUEST,
+            )
 
-        valid_statuses = ['in_progress', 'delivered']
+        valid_statuses = ["in_progress", "delivered"]
         if delivery_status not in valid_statuses:
-            return Response({"error": "Неверный статус доставки."}, status=status_code.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Неверный статус доставки."},
+                status=status_code.HTTP_400_BAD_REQUEST,
+            )
 
-        deliveries = self.queryset.filter(~Q(delivery_status='delivered'))
+        deliveries = self.queryset.filter(~Q(delivery_status="delivered"))
         deliveries.update(delivery_status=delivery_status)
 
         serializer = self.get_serializer(deliveries, many=True)
         return Response(serializer.data)
-
-

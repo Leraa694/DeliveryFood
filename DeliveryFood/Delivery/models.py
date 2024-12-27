@@ -5,27 +5,29 @@ from simple_history.models import HistoricalRecords
 
 class User(AbstractUser):
     ROLES = [
-        ('client', 'Клиент'),
-        ('courier', 'Курьер'),
-        ('admin', 'Администратор'),
-        ('restaurant_service', 'Сервис ресторана'),
+        ("client", "Клиент"),
+        ("courier", "Курьер"),
+        ("admin", "Администратор"),
+        ("restaurant_service", "Сервис ресторана"),
     ]
     history = HistoricalRecords()
     phone = models.CharField(max_length=18, verbose_name="Номер телефона")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес пользователя")
-    role = models.CharField(max_length=20, choices=ROLES, verbose_name="Роль пользователя")
+    role = models.CharField(
+        max_length=20, choices=ROLES, verbose_name="Роль пользователя"
+    )
 
     groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='delivery_user_set',
+        "auth.Group",
+        related_name="delivery_user_set",
         blank=True,
-        verbose_name="Группы пользователя"
+        verbose_name="Группы пользователя",
     )
     user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='delivery_user_permissions_set',
+        "auth.Permission",
+        related_name="delivery_user_permissions_set",
         blank=True,
-        verbose_name="Права пользователя"
+        verbose_name="Права пользователя",
     )
 
     def __str__(self):
@@ -52,9 +54,7 @@ class Restaurant(models.Model):
     address = models.TextField(verbose_name="Адрес ресторана")
     phone = models.CharField(max_length=18, verbose_name="Телефон ресторана")
     cuisine_types = models.ManyToManyField(
-        TypeCuisine,
-        related_name='restaurants',
-        verbose_name="Типы кухни"
+        TypeCuisine, related_name="restaurants", verbose_name="Типы кухни"
     )
 
     def __str__(self):
@@ -73,8 +73,8 @@ class MenuItem(models.Model):
     restaurant = models.ForeignKey(
         Restaurant,
         on_delete=models.CASCADE,
-        related_name='menu_items',
-        verbose_name="Ресторан"
+        related_name="menu_items",
+        verbose_name="Ресторан",
     )
     is_available = models.BooleanField(default=True, verbose_name="Доступно ли блюдо")
 
@@ -89,23 +89,23 @@ class MenuItem(models.Model):
 class Order(models.Model):
     history = HistoricalRecords()
     STATUS_CHOICES = [
-        ('new', 'Новый'),
-        ('preparing', 'Готовится'),
-        ('delivering', 'Доставляется'),
-        ('completed', 'Завершён'),
+        ("new", "Новый"),
+        ("preparing", "Готовится"),
+        ("delivering", "Доставляется"),
+        ("completed", "Завершён"),
     ]
 
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='orders',
-        verbose_name="Пользователь"
+        related_name="orders",
+        verbose_name="Пользователь",
     )
     restaurant = models.ForeignKey(
         Restaurant,
         on_delete=models.CASCADE,
-        related_name='orders',
-        verbose_name="Ресторан"
+        related_name="orders",
+        verbose_name="Ресторан",
     )
     order_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата заказа")
     total_price = models.DecimalField(
@@ -114,16 +114,14 @@ class Order(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='new',
-        verbose_name="Статус заказа"
+        default="new",
+        verbose_name="Статус заказа",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     def update_total_price(self):
         """Обновляет общую стоимость заказа на основе позиций."""
-        self.total_price = sum(
-            item.price for item in self.order_items.all()
-        )
+        self.total_price = sum(item.price for item in self.order_items.all())
 
     def save(self, *args, **kwargs):
         """Переопределяем метод save для автоматического обновления общей стоимости."""
@@ -141,21 +139,20 @@ class Order(models.Model):
         verbose_name_plural = "Заказы"
 
 
-
 class OrderMenuItem(models.Model):
     history = HistoricalRecords()
 
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        related_name='order_items',
-        verbose_name="Заказ"
+        related_name="order_items",
+        verbose_name="Заказ",
     )
     menu_item = models.ForeignKey(
         MenuItem,
         on_delete=models.CASCADE,
-        related_name='order_items',
-        verbose_name="Блюдо"
+        related_name="order_items",
+        verbose_name="Блюдо",
     )
     quantity = models.PositiveIntegerField(verbose_name="Количество", default=1)
 
@@ -175,21 +172,19 @@ class OrderMenuItem(models.Model):
 class Courier(models.Model):
     history = HistoricalRecords()
     VEHICLE_CHOICES = [
-        ('bike', 'Велосипед'),
-        ('car', 'Машина'),
-        ('scooter', 'Скутер'),
+        ("bike", "Велосипед"),
+        ("car", "Машина"),
+        ("scooter", "Скутер"),
     ]
 
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
-        related_name='courier_profile',
-        verbose_name="Пользователь"
+        related_name="courier_profile",
+        verbose_name="Пользователь",
     )
     vehicle_type = models.CharField(
-        max_length=20,
-        choices=VEHICLE_CHOICES,
-        verbose_name="Тип транспорта"
+        max_length=20, choices=VEHICLE_CHOICES, verbose_name="Тип транспорта"
     )
 
     def __str__(self):
@@ -203,28 +198,27 @@ class Courier(models.Model):
 class Delivery(models.Model):
     history = HistoricalRecords()
     STATUS_CHOICES = [
-        ('in_progress', 'В процессе'),
-        ('delivered', 'Доставлено'),
+        ("in_progress", "В процессе"),
+        ("delivered", "Доставлено"),
     ]
 
     order = models.OneToOneField(
-        Order,
-        on_delete=models.CASCADE,
-        related_name='delivery',
-        verbose_name="Заказ"
+        Order, on_delete=models.CASCADE, related_name="delivery", verbose_name="Заказ"
     )
     courier = models.ForeignKey(
         Courier,
         on_delete=models.CASCADE,
-        related_name='deliveries',
-        verbose_name="Курьер"
+        related_name="deliveries",
+        verbose_name="Курьер",
     )
-    delivery_time = models.DateTimeField(blank=True, null=True, verbose_name="Время доставки")
+    delivery_time = models.DateTimeField(
+        blank=True, null=True, verbose_name="Время доставки"
+    )
     delivery_status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='in_progress',
-        verbose_name="Статус доставки"
+        default="in_progress",
+        verbose_name="Статус доставки",
     )
 
     def __str__(self):
