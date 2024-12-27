@@ -267,3 +267,4 @@ pyrightconfig.json
 
 
 # Конец https://www.toptal.com/developers/gitignore/api/python,django
+/DeliveryFood/Delivery/migrations/
