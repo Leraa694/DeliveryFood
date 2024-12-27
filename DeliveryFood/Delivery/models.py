@@ -93,6 +93,7 @@ class Order(models.Model):
         ("preparing", "Готовится"),
         ("delivering", "Доставляется"),
         ("completed", "Завершён"),
+        ("cancelled", "Отменён"),
     ]
 
     user = models.ForeignKey(

@@ -1,7 +1,8 @@
 from celery import shared_task
 from django.core.mail import send_mail
 from django.utils.timezone import now, timedelta
-from .models import Delivery
+from .models import Delivery, Order
+
 
 @shared_task
 def send_delivery_notification():
@@ -40,3 +41,23 @@ def send_delivery_notification():
                 from_email='admin@leradelivery.com',
                 recipient_list=[user_email],
             )
+
+@shared_task
+def mark_overdue_orders():
+    """
+    Задача Celery для автоматической установки статуса "Отменен" у заказов,
+    которые не были завершены в течение 3 часов.
+    """
+    # Определяем временную границу (3 часа назад)
+    overdue_threshold = now() - timedelta(hours=3)
+
+    # Выбираем заказы, которые не завершены и старше 3 часов
+    overdue_orders = Order.objects.filter(
+        status__in=["new", "preparing", "delivering"],  # Не завершенные статусы
+        order_date__lt=overdue_threshold,  # Заказы старше 3 часов
+    )
+
+    # Обновляем статус каждого просроченного заказа
+    for order in overdue_orders:
+        order.status = "cancelled"
+        order.save()

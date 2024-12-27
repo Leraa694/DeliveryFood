@@ -25,4 +25,8 @@ app.conf.beat_schedule = {
         'task': 'Delivery.tasks.send_delivery_notification',
         'schedule': crontab(minute='*'),  # Каждую минуту
     },
+    'mark_overdue_orders': {
+        'task': 'Delivery.tasks.mark_overdue_orders',
+        'schedule': crontab(minute='*/15'),  # Каждые 15 минут
+    },
 }
