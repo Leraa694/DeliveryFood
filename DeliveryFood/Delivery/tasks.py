@@ -2,6 +2,12 @@ from celery import shared_task
 from django.core.mail import send_mail
 from django.utils.timezone import now, timedelta
 from .models import Delivery, Order
+import json
+from django.utils.dateparse import parse_datetime
+from celery import shared_task
+from .models import UserActivity
+from django_redis import get_redis_connection
+
 
 
 @shared_task
@@ -61,3 +67,31 @@ def mark_overdue_orders():
     for order in overdue_orders:
         order.status = "cancelled"
         order.save()
+
+@shared_task
+def save_user_activity_to_db():
+    """
+    Задача для сохранения активности пользователя из Redis в базу данных.
+    """
+    # Подключаемся к Redis через django-redis
+    redis_client = get_redis_connection("default")
+    activities = []
+
+    while True:
+        # Получаем данные активности пользователя из Redis
+        visit_data = redis_client.rpop("user_activity")
+        if not visit_data:
+            break
+        visit = json.loads(visit_data)
+
+        # Добавляем данные в список для пакетного сохранения
+        activities.append(UserActivity(
+            user=visit["user"],  # Используем user_id для оптимизации
+            path=visit["path"],
+            method=visit["method"],
+            timestamp=parse_datetime(visit["timestamp"]),
+        ))
+
+    # Сохраняем данные в базу данных одним запросом
+    if activities:
+        UserActivity.objects.bulk_create(activities)
