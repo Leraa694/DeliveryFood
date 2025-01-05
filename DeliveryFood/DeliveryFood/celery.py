@@ -29,4 +29,8 @@ app.conf.beat_schedule = {
         'task': 'Delivery.tasks.mark_overdue_orders',
         'schedule': crontab(minute='*/15'),  # Каждые 15 минут
     },
+    'save_user_activity_to_db': {
+        'task': 'Delivery.tasks.save_user_activity_to_db',
+        'schedule': crontab(minute='*'),
+    },
 }

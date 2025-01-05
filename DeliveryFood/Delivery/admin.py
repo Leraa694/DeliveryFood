@@ -7,7 +7,7 @@ from .models import (
     TypeCuisine,
     OrderMenuItem,
     Courier,
-    Delivery,
+    Delivery, UserActivity,
 )
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
@@ -154,3 +154,12 @@ class DeliveryAdmin(SimpleHistoryAdmin):
     list_display = ("order", "courier", "delivery_time", "delivery_status")
     list_filter = ("delivery_status",)
     search_fields = ("order__id", "courier__user__username")
+
+@admin.register(UserActivity)
+class UserActivityAdmin(admin.ModelAdmin):
+    list_display = ('user', 'path', 'method', 'timestamp')  # Поля для отображения в списке
+    list_filter = ('method', 'timestamp')  # Фильтры в правой панели
+    search_fields = ('user', 'path', 'method')  # Поля для поиска
+    ordering = ('-timestamp',)  # Сортировка по умолчанию (по дате, от нового к старому)
+    date_hierarchy = 'timestamp'  # Иерархия по дате
+
