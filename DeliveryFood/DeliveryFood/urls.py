@@ -23,7 +23,8 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", include("Delivery.urls")),
+    path("api/", include("Delivery.urls_api")),
+    path("", include("Delivery.urls_templates")),
     path(
         "swagger/",
         schema_view.with_ui("swagger", cache_timeout=0),
@@ -35,4 +36,8 @@ urlpatterns = [
         schema_view.without_ui(cache_timeout=0),
         name="schema-json",
     ),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

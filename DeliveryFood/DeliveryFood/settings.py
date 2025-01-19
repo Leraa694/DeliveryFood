@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "import_export",
     "django_filters",
     "simple_history",
+    "widget_tweaks",
 ]
 
 MIDDLEWARE = [
@@ -90,19 +91,20 @@ ROOT_URLCONF = "DeliveryFood.urls"
 
 TEMPLATES = [
     {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.debug",
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / "templates"],  # Глобальная папка для шаблонов, если требуется
+        'APP_DIRS': True,  # Включает автоматический поиск шаблонов в папках приложений
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
             ],
         },
     },
 ]
+
 
 WSGI_APPLICATION = "DeliveryFood.wsgi.application"
 
