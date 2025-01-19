@@ -26,7 +26,6 @@ class StandardResultsSetPagination(PageNumberPagination):
     )
     max_page_size = 100  # Максимальное количество элементов на странице
 
-
 class RestaurantViewSet(viewsets.ModelViewSet):
     queryset = Restaurant.objects.all()
     serializer_class = RestaurantSerializer
@@ -37,6 +36,7 @@ class RestaurantViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(operation_summary="Получить список ресторанов")
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        queryset = queryset.prefetch_related("cuisine_types")  # Оптимизация
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -69,6 +69,7 @@ class RestaurantViewSet(viewsets.ModelViewSet):
             )
 
         restaurants = self.queryset.filter(cuisine_types__name__icontains=cuisine_type)
+        restaurants = restaurants.prefetch_related("cuisine_types")  # Оптимизация
         page = self.paginate_queryset(restaurants)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -79,7 +80,7 @@ class RestaurantViewSet(viewsets.ModelViewSet):
 
 
 class MenuItemViewSet(viewsets.ModelViewSet):
-    queryset = MenuItem.objects.all()
+    queryset = MenuItem.objects.select_related("restaurant").all()  # Оптимизация
     serializer_class = MenuItemSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ["name", "description"]
@@ -88,6 +89,7 @@ class MenuItemViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(operation_summary="Получить список блюд")
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        queryset = queryset.select_related("restaurant")  # Оптимизация
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -136,6 +138,7 @@ class MenuItemViewSet(viewsets.ModelViewSet):
             )
 
         menu_items = self.queryset.filter(restaurant__id=restaurant_id)
+        menu_items = menu_items.select_related("restaurant")  # Оптимизация
         page = self.paginate_queryset(menu_items)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
