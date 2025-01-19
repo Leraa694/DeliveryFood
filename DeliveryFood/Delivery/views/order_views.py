@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from rest_framework import viewsets, permissions, filters, status as status_code
+from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
@@ -360,7 +361,11 @@ class OrderMenuItemViewSet(viewsets.ModelViewSet):
                 status=status_code.HTTP_400_BAD_REQUEST,
             )
 
-        items = self.queryset.filter(order__id=order_id)
+        # Проверка существования заказа
+        order = get_object_or_404(self.queryset.model.order.field.related_model, id=order_id)
+
+        # Получение позиций по заказу
+        items = self.queryset.filter(order=order)
         page = self.paginate_queryset(items)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
