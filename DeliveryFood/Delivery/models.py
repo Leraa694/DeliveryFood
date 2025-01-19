@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Q, Manager
 from simple_history.models import HistoricalRecords
 
 
@@ -168,6 +169,20 @@ class OrderMenuItem(models.Model):
         verbose_name = "Позиция в заказе"
         verbose_name_plural = "Позиции в заказе"
 
+class CourierManager(Manager):
+    def by_vehicle_type(self, vehicle_type):
+        return self.filter(vehicle_type=vehicle_type)
+
+    def filtered(self, vehicle_types, first_name_starts_with, exclude_last_name_contains):
+        query = Q()
+        if vehicle_types:
+            query &= Q(vehicle_type__in=vehicle_types.split(','))
+        if first_name_starts_with:
+            query &= Q(user__first_name__startswith=first_name_starts_with)
+        if exclude_last_name_contains:
+            query &= ~Q(user__last_name__icontains=exclude_last_name_contains)
+        return self.filter(query)
+
 
 class Courier(models.Model):
     history = HistoricalRecords()
@@ -193,6 +208,8 @@ class Courier(models.Model):
     class Meta:
         verbose_name = "Курьер"
         verbose_name_plural = "Курьеры"
+
+    objects = CourierManager()
 
 
 class Delivery(models.Model):

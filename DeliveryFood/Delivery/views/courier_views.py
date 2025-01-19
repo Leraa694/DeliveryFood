@@ -1,13 +1,10 @@
-from datetime import timedelta
-
-from pkg_resources import require
 from rest_framework import viewsets, permissions, filters, status as status_code
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Manager
 from rest_framework.decorators import action
 from ..models import Courier, Delivery
 from ..serializers.courier_serializers import CourierSerializer, DeliverySerializer
@@ -35,14 +32,6 @@ class CourierViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    @swagger_auto_schema(operation_summary="Создать нового курьера")
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-
-    @swagger_auto_schema(operation_summary="Обновить данные курьера")
-    def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
-
     @swagger_auto_schema(
         operation_summary="Получить курьеров по типу транспорта",
         manual_parameters=[
@@ -56,24 +45,13 @@ class CourierViewSet(viewsets.ModelViewSet):
     )
     @action(methods=["GET"], detail=False, url_path="by-vehicle-type")
     def couriers_by_vehicle_type(self, request):
-        """
-        Возвращает курьеров, у которых указан определённый тип транспорта.
-        """
         vehicle_type = request.query_params.get("vehicle_type")
         if not vehicle_type:
-            return Response(
-                {"error": "Параметр 'vehicle_type' обязателен."},
-                status=status_code.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "Параметр 'vehicle_type' обязателен."},
+                            status=status_code.HTTP_400_BAD_REQUEST)
 
-        couriers = self.queryset.filter(vehicle_type=vehicle_type)
-        page = self.paginate_queryset(couriers)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(couriers, many=True)
-        return Response(serializer.data)
+        couriers = Courier.objects.by_vehicle_type(vehicle_type)
+        return self.get_paginated_response_or_list(couriers)
 
     @swagger_auto_schema(
         operation_summary="Фильтрация курьеров по условиям",
@@ -81,23 +59,20 @@ class CourierViewSet(viewsets.ModelViewSet):
             openapi.Parameter(
                 "vehicle_type",
                 openapi.IN_QUERY,
-                description="Типы транспорта через запятую (например, 'bike,car')",
+                description="Типы транспорта через запятую",
                 type=openapi.TYPE_STRING,
-                require=True,
             ),
             openapi.Parameter(
                 "first_name_starts_with",
                 openapi.IN_QUERY,
-                description="Имя пользователя, начинающееся с указанной буквы",
+                description="Имя, начинающееся с определенной буквы",
                 type=openapi.TYPE_STRING,
-                require=True,
             ),
             openapi.Parameter(
                 "exclude_last_name_contains",
                 openapi.IN_QUERY,
-                description="Исключить пользователей с фамилией, содержащей указанное значение",
+                description="Исключить фамилии, содержащие определенную подстроку",
                 type=openapi.TYPE_STRING,
-                require=True,
             ),
         ],
         responses={
@@ -107,44 +82,22 @@ class CourierViewSet(viewsets.ModelViewSet):
     )
     @action(methods=["GET"], detail=False, url_path="filtered-couriers")
     def filtered_couriers(self, request):
-        """
-        Фильтрация курьеров на основе нескольких критериев.
-        """
         vehicle_types = request.query_params.get("vehicle_type")
         first_name_starts_with = request.query_params.get("first_name_starts_with")
-        exclude_last_name_contains = request.query_params.get(
-            "exclude_last_name_contains"
+        exclude_last_name_contains = request.query_params.get("exclude_last_name_contains")
+
+        couriers = Courier.objects.filtered(
+            vehicle_types, first_name_starts_with, exclude_last_name_contains
         )
+        return self.get_paginated_response_or_list(couriers)
 
-        # Базовый фильтр без условий
-        vehicle_filter = Q()
-
-        # Добавляем фильтр по типу транспорта
-        if vehicle_types:
-            vehicle_type_filters = Q()
-            for vehicle_type in vehicle_types.split(","):
-                vehicle_type_filters |= Q(vehicle_type=vehicle_type)
-            vehicle_filter &= vehicle_type_filters
-
-        # Добавляем фильтр по начальной букве имени
-        if first_name_starts_with:
-            vehicle_filter &= Q(user__first_name__startswith=first_name_starts_with)
-
-        # Исключаем по подстроке в фамилии
-        if exclude_last_name_contains:
-            vehicle_filter &= ~Q(user__last_name__icontains=exclude_last_name_contains)
-
-        # Применяем фильтры к queryset
-        couriers = self.queryset.filter(vehicle_filter)
-
-        # Проверяем, что возвращается корректный результат
-        page = self.paginate_queryset(couriers)
+    def get_paginated_response_or_list(self, queryset):
+        page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(couriers, many=True)
-        return Response(serializer.data, status=status_code.HTTP_200_OK)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class DeliveryViewSet(viewsets.ModelViewSet):
