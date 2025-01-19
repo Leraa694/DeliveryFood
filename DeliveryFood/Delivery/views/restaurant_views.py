@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Avg, Count
 from rest_framework.decorators import action
 from ..models import Restaurant, MenuItem
 from ..serializers.restaurant_serializers import (
@@ -95,6 +95,22 @@ class MenuItemViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+    @swagger_auto_schema(operation_summary="Получить среднюю цену и количество блюд")
+    @action(methods=["GET"], detail=False, url_path="aggregated-stats")
+    def aggregated_stats(self, request):
+        """
+        Возвращает статистику: средняя цена и общее количество блюд.
+        """
+        stats = self.queryset.aggregate(
+            average_price=Avg("price"), total_items=Count("id")
+        )
+        return Response(
+            {
+                "average_price": stats["average_price"],
+                "total_items": stats["total_items"],
+            }
+        )
 
     @swagger_auto_schema(
         operation_summary="Получить блюда по ресторану",
