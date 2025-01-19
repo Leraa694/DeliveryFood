@@ -3,11 +3,16 @@
 {% block title %}Список заказов{% endblock %}
 
 {% block extra_css %}
+
+
 <link rel="stylesheet" href="{% static 'Delivery/order/css/order_list.css' %}">
 {% endblock %}
 
 {% block content %}
+{% load order_tags %}
+
 <h1>Список заказов</h1>
+<p>{% greeting %}</p>
 <table>
     <thead>
         <tr>
@@ -37,4 +42,14 @@
         {% endfor %}
     </tbody>
 </table>
+<h2>Последние заказы</h2>
+<ul>
+    {% recent_orders 3 as recent %}
+    {% for order in recent %}
+    <li>{{ order.id }} — {{ order.restaurant.name|default:"Не указано" }} — {{ order.order_date|date:"d.m.Y" }}</li>
+    {% empty %}
+    <li>Нет заказов</li>
+    {% endfor %}
+</ul>
+<p>Итоговая стоимость: {% calculate_total 200 3 %} ₽</p>
 {% endblock %}
