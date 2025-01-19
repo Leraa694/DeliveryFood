@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import Q, Manager
+from django.urls import reverse
 from simple_history.models import HistoricalRecords
 
 
@@ -237,6 +238,10 @@ class Delivery(models.Model):
         default="in_progress",
         verbose_name="Статус доставки",
     )
+
+    def get_absolute_url(self):
+        """Возвращает абсолютный URL для просмотра деталей доставки."""
+        return reverse("delivery_detail", kwargs={"pk": self.pk})
 
     def __str__(self):
         return f"Доставка для заказа {self.order.id}"
