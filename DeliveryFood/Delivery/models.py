@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.db.models import Q, Manager
 from django.urls import reverse
@@ -79,6 +80,13 @@ class MenuItem(models.Model):
         verbose_name="Ресторан",
     )
     is_available = models.BooleanField(default=True, verbose_name="Доступно ли блюдо")
+    image = models.ImageField(
+        upload_to="menu_images/",
+        blank=True,
+        null=True,
+        verbose_name="Изображение блюда",
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png"])],
+    )
 
     def __str__(self):
         return f"Блюдо {self.name} из ресторана {self.restaurant.name}"
