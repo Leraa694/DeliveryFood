@@ -3,6 +3,7 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.db.models import Q, Manager
 from django.urls import reverse
+from rest_framework.exceptions import ValidationError
 from simple_history.models import HistoricalRecords
 
 
@@ -32,6 +33,23 @@ class User(AbstractUser):
         blank=True,
         verbose_name="Права пользователя",
     )
+
+    # Пример clean_<fieldname>()
+    def clean_phone(self):
+        """Проверка корректности телефонного номера."""
+        if not self.phone.startswith("+"):
+            raise ValidationError("Номер телефона должен начинаться с '+'.")
+        return self.phone
+
+    # Пример save с commit=True
+    def save(self, commit=True):
+        """Сохраняет объект формы, с возможностью дальнейшей доработки."""
+        instance = super().save(commit=False)
+        # Дополнительная обработка объекта перед сохранением
+        instance.phone = instance.phone.replace("-", "").replace(" ", "")
+        if commit:
+            instance.save()
+        return instance
 
     def __str__(self):
         return f"{self.username} ({self.get_full_name()})"
