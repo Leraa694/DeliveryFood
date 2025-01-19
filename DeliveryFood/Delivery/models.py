@@ -58,6 +58,31 @@ class User(AbstractUser):
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
 
+class RestaurantCuisine(models.Model):
+    """Промежуточная модель для связи ресторанов с типами кухни."""
+    restaurant = models.ForeignKey(
+        'Restaurant',
+        on_delete=models.CASCADE,
+        related_name='restaurant_cuisines',
+        verbose_name="Ресторан"
+    )
+    cuisine_type = models.ForeignKey(
+        'TypeCuisine',
+        on_delete=models.CASCADE,
+        related_name='restaurant_cuisines',
+        verbose_name="Тип кухни"
+    )
+    popularity = models.PositiveIntegerField(
+        default=0, verbose_name="Популярность блюда"
+    )
+
+    def __str__(self):
+        return f"{self.restaurant.name} - {self.cuisine_type.name}"
+
+    class Meta:
+        verbose_name = "Связь ресторана и кухни"
+        verbose_name_plural = "Связи ресторанов и кухонь"
+        unique_together = ('restaurant', 'cuisine_type')
 
 class TypeCuisine(models.Model):
     name = models.CharField(max_length=50, verbose_name="Название типа кухни")
@@ -75,7 +100,10 @@ class Restaurant(models.Model):
     address = models.TextField(verbose_name="Адрес ресторана")
     phone = models.CharField(max_length=18, verbose_name="Телефон ресторана")
     cuisine_types = models.ManyToManyField(
-        TypeCuisine, related_name="restaurants", verbose_name="Типы кухни"
+        'TypeCuisine',
+        through='RestaurantCuisine',
+        related_name="restaurants",
+        verbose_name="Типы кухни"
     )
 
     def __str__(self):
