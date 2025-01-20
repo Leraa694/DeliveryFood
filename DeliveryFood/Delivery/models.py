@@ -42,14 +42,20 @@ class User(AbstractUser):
         return self.phone
 
     # Пример save с commit=True
-    def save(self, commit=True):
-        """Сохраняет объект формы, с возможностью дальнейшей доработки."""
-        instance = super().save(commit=False)
-        # Дополнительная обработка объекта перед сохранением
-        instance.phone = instance.phone.replace("-", "").replace(" ", "")
-        if commit:
-            instance.save()
-        return instance
+    def save(self, commit=True, *args, **kwargs):
+        """
+        Переопределённый метод save с поддержкой commit.
+        Если commit=False, объект будет подготовлен, но не сохранён в базе данных.
+        """
+        if self.phone:
+            self.phone = self.phone.replace("-", "").replace(" ", "")
+
+        # Если commit=False, возвращаем объект без сохранения
+        if not commit:
+            return super(User, self).save_base(raw=False, *args, **kwargs)
+
+        # Если commit=True, вызываем стандартный save
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.username} ({self.get_full_name()})"
