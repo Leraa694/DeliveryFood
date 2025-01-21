@@ -78,6 +78,22 @@ class RestaurantViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(restaurants, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(operation_summary="Получить статистику блюд по ресторанам")
+    @action(methods=["GET"], detail=False, url_path="menu-stats")
+    def menu_stats(self, request):
+        """
+        Возвращает количество блюд и среднюю цену по каждому ресторану.
+        """
+        stats = (
+            MenuItem.objects.values("restaurant__id", "restaurant__name")
+            .annotate(
+                total_items=Count("id"),
+                average_price=Avg("price"),
+            )
+            .order_by("-total_items")
+        )
+        return Response(stats)
+
 
 class MenuItemViewSet(viewsets.ModelViewSet):
     queryset = MenuItem.objects.select_related("restaurant").all()  # Оптимизация
@@ -188,3 +204,29 @@ class MenuItemViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(filtered_items, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(
+        operation_summary="Получить названия и цены блюд для ресторана",
+        manual_parameters=[
+            openapi.Parameter(
+                "restaurant_id",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_INTEGER,
+                description="ID ресторана",
+                required=True,
+            ),
+        ],
+    )
+    @action(methods=["GET"], detail=False, url_path="names-and-prices-by-restaurant")
+    def names_and_prices_by_restaurant(self, request):
+        """
+        Возвращает список названий и цен блюд для заданного ресторана.
+        """
+        restaurant_id = request.query_params.get("restaurant_id")
+        if not restaurant_id:
+            return Response(
+                {"error": "Параметр 'restaurant_id' обязателен."},
+                status=status_code.HTTP_400_BAD_REQUEST,
+            )
+
+        items = self.queryset.filter(restaurant_id=restaurant_id).values_list("name", "price")
+        return Response(list(items))
