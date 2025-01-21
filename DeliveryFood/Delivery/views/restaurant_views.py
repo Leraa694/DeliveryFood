@@ -146,3 +146,45 @@ class MenuItemViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(menu_items, many=True)
         return Response(serializer.data)
+
+    @swagger_auto_schema(
+        operation_summary="Исключить блюда с ценой ниже заданного порога",
+        manual_parameters=[
+            openapi.Parameter(
+                "price_threshold",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_NUMBER,
+                description="Минимальная цена блюда",
+            ),
+        ],
+    )
+    @action(methods=["GET"], detail=False, url_path="exclude-low-price")
+    def exclude_low_price_items(self, request):
+        """
+        Исключает блюда с ценой ниже заданного порога.
+        """
+        price_threshold = request.query_params.get("price_threshold")
+        if not price_threshold:
+            return Response(
+                {"error": "Параметр 'price_threshold' обязателен."},
+                status=status_code.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            price_threshold = float(price_threshold)
+        except ValueError:
+            return Response(
+                {"error": "Параметр 'price_threshold' должен быть числом."},
+                status=status_code.HTTP_400_BAD_REQUEST,
+            )
+
+        filtered_items = self.queryset.exclude(price__lt=price_threshold)
+        filtered_items = filtered_items.select_related("restaurant")  # Оптимизация
+        page = self.paginate_queryset(filtered_items)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(filtered_items, many=True)
+        return Response(serializer.data)
+

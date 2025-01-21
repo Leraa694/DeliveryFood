@@ -42,23 +42,16 @@ class User(AbstractUser):
         return self.phone
 
     # Пример save с commit=True
-    def save(self, commit=True, *args, **kwargs):
-        """
-        Переопределённый метод save с поддержкой commit.
-        Если commit=False, объект будет подготовлен, но не сохранён в базе данных.
-        """
+    def save(self, *args, **kwargs):
+        """Сохраняет объект с обработкой дополнительных полей."""
+        # Дополнительная обработка перед сохранением
         if self.phone:
             self.phone = self.phone.replace("-", "").replace(" ", "")
-
-        # Если commit=False, возвращаем объект без сохранения
-        if not commit:
-            return super(User, self).save_base(raw=False, *args, **kwargs)
-
-        # Если commit=True, вызываем стандартный save
-        super().save(*args, **kwargs)
+        super(User, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.username} ({self.get_full_name()})"
+
 
     class Meta:
         verbose_name = "Пользователь"
@@ -81,10 +74,8 @@ class RestaurantCuisine(models.Model):
     popularity = models.PositiveIntegerField(
         default=0, verbose_name="Популярность блюда"
     )
-
     def __str__(self):
         return f"{self.restaurant.name} - {self.cuisine_type.name}"
-
     class Meta:
         verbose_name = "Связь ресторана и кухни"
         verbose_name_plural = "Связи ресторанов и кухонь"
@@ -106,10 +97,8 @@ class Restaurant(models.Model):
     address = models.TextField(verbose_name="Адрес ресторана")
     phone = models.CharField(max_length=18, verbose_name="Телефон ресторана")
     cuisine_types = models.ManyToManyField(
-        'TypeCuisine',
-        through='RestaurantCuisine',
-        related_name="restaurants",
-        verbose_name="Типы кухни"
+        TypeCuisine, related_name="restaurants", verbose_name="Типы кухни",
+        through='RestaurantCuisine'
     )
 
     def __str__(self):
@@ -169,6 +158,7 @@ class Order(models.Model):
         related_name="orders",
         verbose_name="Ресторан",
     )
+    link_dogovor = models.URLField(null=True, blank=True, verbose_name="Договор ссылка")
     order_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата заказа")
     total_price = models.DecimalField(
         max_digits=10, decimal_places=2, default=0, verbose_name="Общая стоимость"
@@ -180,7 +170,6 @@ class Order(models.Model):
         verbose_name="Статус заказа",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
-    link_dogovor = models.URLField(null=True, blank=True, verbose_name="Ссылка на договор о заявке")
 
     def update_total_price(self):
         """Обновляет общую стоимость заказа на основе позиций."""
@@ -198,9 +187,9 @@ class Order(models.Model):
         return f"Заказ {self.id} от {self.user.get_full_name()} из ресторана {self.restaurant.name}"
 
     class Meta:
-        ordering = ["total_price"]
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
+        ordering = ["total_price"]
 
 
 class OrderMenuItem(models.Model):
@@ -264,7 +253,8 @@ class Courier(models.Model):
     vehicle_type = models.CharField(
         max_length=20, choices=VEHICLE_CHOICES, verbose_name="Тип транспорта"
     )
-    documents = models.FileField(upload_to='documents/', blank=True, null=True, verbose_name="Документы")
+
+    documents = models.FileField(upload_to='documents/', blank=True, null=True)
 
     def __str__(self):
         return f"Курьер {self.user.get_full_name()}"
