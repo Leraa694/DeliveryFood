@@ -7,7 +7,7 @@ from .models import (
     TypeCuisine,
     OrderMenuItem,
     Courier,
-    Delivery,
+    Delivery, RestaurantCuisine,
 )
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
@@ -58,6 +58,7 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
         "total_price",
         "status",
         "order_items_count",
+        "link_dogovor",
     )
     list_filter = ("status", "restaurant")
     search_fields = ("user__username", "restaurant__name")
@@ -120,11 +121,17 @@ class TypeCuisineAdmin(admin.ModelAdmin):
     ordering = ("name",)
 
 
+class RestaurantCuisineInline(admin.TabularInline):
+    model = RestaurantCuisine
+    extra = 1  # Количество пустых строк для добавления новых связей
+    autocomplete_fields = ("cuisine_type",)  # Удобный поиск по типам кухни
+
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
     list_display = ("name", "phone", "get_cuisines")
     search_fields = ("name", "phone")
     list_filter = ("name",)  # Используйте существующие поля
+    inlines = [RestaurantCuisineInline]
 
     def get_cuisines(self, obj):
         return ", ".join([cuisine.name for cuisine in obj.cuisine_types.all()])
@@ -145,8 +152,9 @@ class UserAdmin(SimpleHistoryAdmin):
 
 @admin.register(Courier)
 class CourierAdmin(SimpleHistoryAdmin):
-    list_display = ("user", "vehicle_type")
+    list_display = ("user", "vehicle_type", "documents")
     list_filter = ("vehicle_type",)
+
 
 
 @admin.register(Delivery)

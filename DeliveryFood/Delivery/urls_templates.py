@@ -1,9 +1,10 @@
 from django.urls import path
-from .template_views import order_views
+from .template_views import order_views, restaurants_views
 
 urlpatterns = [
     path("orders/", order_views.order_list, name="order_list"),
     path("orders/new/", order_views.order_form, name="order_new"),
     path("orders/<int:pk>/edit/", order_views.order_form, name="order_edit"),
     path("orders/<int:pk>/delete/", order_views.order_confirm_delete, name="order_confirm_delete"),
+    path("restaurants/", restaurants_views.restaurant_list, name="restaurants"),
 ]

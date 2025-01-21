@@ -180,6 +180,7 @@ class Order(models.Model):
         verbose_name="Статус заказа",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    link_dogovor = models.URLField(null=True, blank=True, verbose_name="Ссылка на договор о заявке")
 
     def update_total_price(self):
         """Обновляет общую стоимость заказа на основе позиций."""
@@ -197,6 +198,7 @@ class Order(models.Model):
         return f"Заказ {self.id} от {self.user.get_full_name()} из ресторана {self.restaurant.name}"
 
     class Meta:
+        ordering = ["total_price"]
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
 
@@ -262,6 +264,7 @@ class Courier(models.Model):
     vehicle_type = models.CharField(
         max_length=20, choices=VEHICLE_CHOICES, verbose_name="Тип транспорта"
     )
+    documents = models.FileField(upload_to='documents/', blank=True, null=True, verbose_name="Документы")
 
     def __str__(self):
         return f"Курьер {self.user.get_full_name()}"

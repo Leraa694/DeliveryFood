@@ -23,3 +23,5 @@ def order_confirm_delete(request, pk):
         order.delete()
         return redirect("order_list")
     return render(request, "Delivery/order/order_confirm_delete.html", {"object": order})
+
+
