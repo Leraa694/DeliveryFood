@@ -221,19 +221,44 @@ class OrderMenuItem(models.Model):
         verbose_name = "Позиция в заказе"
         verbose_name_plural = "Позиции в заказе"
 
-class CourierManager(Manager):
+class CourierQuerySet(models.QuerySet):
     def by_vehicle_type(self, vehicle_type):
         return self.filter(vehicle_type=vehicle_type)
 
-    def filtered(self, vehicle_types, first_name_starts_with, exclude_last_name_contains):
-        query = Q()
+    def with_vehicle_types(self, vehicle_types):
         if vehicle_types:
-            query &= Q(vehicle_type__in=vehicle_types.split(','))
+            return self.filter(vehicle_type__in=vehicle_types.split(','))
+        return self
+
+    def with_first_name_starts_with(self, first_name_starts_with):
         if first_name_starts_with:
-            query &= Q(user__first_name__startswith=first_name_starts_with)
+            return self.filter(user__first_name__startswith=first_name_starts_with)
+        return self
+
+    def exclude_last_name_contains(self, exclude_last_name_contains):
         if exclude_last_name_contains:
-            query &= ~Q(user__last_name__icontains=exclude_last_name_contains)
-        return self.filter(query)
+            return self.exclude(user__last_name__icontains=exclude_last_name_contains)
+        return self
+
+
+class CourierManager(models.Manager):
+    def get_queryset(self):
+        return CourierQuerySet(self.model, using=self._db)
+
+    def by_vehicle_type(self, vehicle_type):
+        return self.get_queryset().by_vehicle_type(vehicle_type)
+
+    def filtered(self, vehicle_types=None, first_name_starts_with=None, exclude_last_name_contains=None):
+        """
+        Функция применяет цепочку фильтров для фильтрации курьеров.
+        """
+        return (
+            self.get_queryset()
+            .with_vehicle_types(vehicle_types)
+            .with_first_name_starts_with(first_name_starts_with)
+            .exclude_last_name_contains(exclude_last_name_contains)
+        )
+
 
 
 class Courier(models.Model):
