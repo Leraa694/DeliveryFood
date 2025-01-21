@@ -64,31 +64,6 @@ class User(AbstractUser):
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
 
-class RestaurantCuisine(models.Model):
-    """Промежуточная модель для связи ресторанов с типами кухни."""
-    restaurant = models.ForeignKey(
-        'Restaurant',
-        on_delete=models.CASCADE,
-        related_name='restaurant_cuisines',
-        verbose_name="Ресторан"
-    )
-    cuisine_type = models.ForeignKey(
-        'TypeCuisine',
-        on_delete=models.CASCADE,
-        related_name='restaurant_cuisines',
-        verbose_name="Тип кухни"
-    )
-    popularity = models.PositiveIntegerField(
-        default=0, verbose_name="Популярность блюда"
-    )
-
-    def __str__(self):
-        return f"{self.restaurant.name} - {self.cuisine_type.name}"
-
-    class Meta:
-        verbose_name = "Связь ресторана и кухни"
-        verbose_name_plural = "Связи ресторанов и кухонь"
-        unique_together = ('restaurant', 'cuisine_type')
 
 class TypeCuisine(models.Model):
     name = models.CharField(max_length=50, verbose_name="Название типа кухни")
@@ -100,61 +75,91 @@ class TypeCuisine(models.Model):
         verbose_name = "Тип кухни"
         verbose_name_plural = "Типы кухонь"
 
-
 class Restaurant(models.Model):
     name = models.CharField(max_length=255, verbose_name="Название ресторана")
-    address = models.TextField(verbose_name="Адрес ресторана")
-    phone = models.CharField(max_length=18, verbose_name="Телефон ресторана")
+    address = models.TextField(verbose_name="Адрес")
+    phone = models.CharField(max_length=20, verbose_name="Телефон")
+    description = models.TextField(null=True, blank=True, verbose_name="Описание ресторана")
+    logo = models.ImageField(
+        upload_to='restaurant_logos/',
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
+        verbose_name="Логотип ресторана"
+    )
     cuisine_types = models.ManyToManyField(
         'TypeCuisine',
-        through='RestaurantCuisine',
-        related_name="restaurants",
+        related_name='restaurants',
         verbose_name="Типы кухни"
     )
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
 
-    def __str__(self):
-        return self.name
+    def get_cuisines(self):
+        return ", ".join([cuisine.name for cuisine in self.cuisine_types.all()])
+    get_cuisines.short_description = "Типы кухни"
 
     class Meta:
         verbose_name = "Ресторан"
         verbose_name_plural = "Рестораны"
 
+    def __str__(self):
+        return self.name
 
-class MenuItem(models.Model):
-    history = HistoricalRecords()
-    name = models.CharField(max_length=255, verbose_name="Название блюда")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
-    description = models.TextField(blank=True, null=True, verbose_name="Описание блюда")
+
+class MenuCategory(models.Model):
+    name = models.CharField(max_length=100, verbose_name="Название категории")
     restaurant = models.ForeignKey(
         Restaurant,
         on_delete=models.CASCADE,
-        related_name="menu_items",
-        verbose_name="Ресторан",
-    )
-    is_available = models.BooleanField(default=True, verbose_name="Доступно ли блюдо")
-    image = models.ImageField(
-        upload_to="menu_images/",
-        blank=True,
-        null=True,
-        verbose_name="Изображение блюда",
-        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png"])],
+        related_name="categories",
+        verbose_name="Ресторан"
     )
 
     def __str__(self):
-        return f"Блюдо {self.name} из ресторана {self.restaurant.name}"
+        return f"{self.name} ({self.restaurant.name})"
 
     class Meta:
-        verbose_name = "Блюдо"
-        verbose_name_plural = "Блюда"
+        verbose_name = "Категория меню"
+        verbose_name_plural = "Категории меню"
+        unique_together = ('name', 'restaurant')
+
+
+class MenuItem(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    image = models.ImageField(upload_to='menu_items/', blank=True, null=True)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='menu_items')
+    category = models.ForeignKey('MenuCategory', on_delete=models.SET_NULL, null=True, blank=True)
+    is_available = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)  # Для мягкого удаления
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Блюдо'
+        verbose_name_plural = 'Блюда'
+
+    def __str__(self):
+        return f"{self.name} ({self.restaurant.name})"
+
+    def soft_delete(self):
+        """Мягкое удаление"""
+        self.is_active = False
+        self.is_available = False
+        self.save()
+
 
 
 class Order(models.Model):
     history = HistoricalRecords()
     STATUS_CHOICES = [
-        ("new", "Новый"),
-        ("preparing", "Готовится"),
-        ("delivering", "Доставляется"),
-        ("completed", "Завершён"),
+        ('new', 'Новый'),
+        ('processing', 'В обработке'),
+        ('delivering', 'Доставляется'),
+        ('completed', 'Выполнен'),
+        ('cancelled', 'Отменён')
     ]
 
     user = models.ForeignKey(
@@ -184,7 +189,9 @@ class Order(models.Model):
 
     def update_total_price(self):
         """Обновляет общую стоимость заказа на основе позиций."""
-        self.total_price = sum(item.price for item in self.order_items.all())
+        total = sum(item.get_total() for item in self.items.all())
+        self.total_price = total
+        self.save()
 
     def save(self, *args, **kwargs):
         """Переопределяем метод save для автоматического обновления общей стоимости."""
@@ -204,33 +211,37 @@ class Order(models.Model):
 
 
 class OrderMenuItem(models.Model):
-    history = HistoricalRecords()
-
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        related_name="order_items",
-        verbose_name="Заказ",
+        related_name='items',
+        verbose_name="Заказ"
     )
     menu_item = models.ForeignKey(
         MenuItem,
-        on_delete=models.CASCADE,
-        related_name="order_items",
-        verbose_name="Блюдо",
+        on_delete=models.PROTECT,
+        related_name='order_items',
+        verbose_name="Блюдо"
     )
-    quantity = models.PositiveIntegerField(verbose_name="Количество", default=1)
-
-    @property
-    def price(self):
-        """Вычисляет стоимость позиции на основе цены блюда."""
-        return self.menu_item.price * self.quantity
-
-    def __str__(self):
-        return f"{self.quantity}x {self.menu_item.name} для заказа {self.order.id}"
+    quantity = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Количество"
+    )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Цена на момент заказа"
+    )
 
     class Meta:
-        verbose_name = "Позиция в заказе"
-        verbose_name_plural = "Позиции в заказе"
+        verbose_name = "Позиция заказа"
+        verbose_name_plural = "Позиции заказа"
+
+    def __str__(self):
+        return f"{self.menu_item.name} x{self.quantity} в заказе №{self.order.id}"
+
+    def get_total(self):
+        return self.price * self.quantity
 
 class CourierManager(Manager):
     def by_vehicle_type(self, vehicle_type):
