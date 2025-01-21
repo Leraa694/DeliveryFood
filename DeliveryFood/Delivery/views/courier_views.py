@@ -99,6 +99,36 @@ class CourierViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(
+        operation_summary="Получить количество активных курьеров",
+        responses={
+            200: openapi.Response(
+                description="Количество активных курьеров",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "active_couriers_count": openapi.Schema(
+                            type=openapi.TYPE_INTEGER,
+                            description="Количество активных курьеров",
+                        )
+                    },
+                ),
+            )
+        },
+    )
+    @action(methods=["GET"], detail=False, url_path="active-couriers-stats")
+    def get_active_couriers_stats(self, request):
+        """
+        Возвращает статистику активных курьеров по типу транспорта.
+        """
+        vehicle_stats = {
+            vehicle: Courier.objects.filter(vehicle_type=vehicle, user__is_active=True).count()
+            for vehicle, _ in Courier.VEHICLE_CHOICES
+        }
+        total_active = sum(vehicle_stats.values())
+        vehicle_stats["total_active"] = total_active
+        return Response(vehicle_stats, status=status_code.HTTP_200_OK)
+
 
 class DeliveryViewSet(viewsets.ModelViewSet):
     queryset = Delivery.objects.all()
@@ -186,8 +216,13 @@ class DeliveryViewSet(viewsets.ModelViewSet):
                 status=status_code.HTTP_400_BAD_REQUEST,
             )
 
-        deliveries = self.queryset.filter(~Q(delivery_status="delivered"))
-        deliveries.update(delivery_status=delivery_status)
+        deliveries_query = self.queryset.filter(~Q(delivery_status="delivered"))
 
-        serializer = self.get_serializer(deliveries, many=True)
+        # Проверка наличия записей перед обновлением
+        if not deliveries_query.exists():
+            return Response({"error": "Нет доставок для изменения."}, status=status_code.HTTP_404_NOT_FOUND)
+
+        deliveries_query.update(delivery_status=delivery_status)
+
+        serializer = self.get_serializer(deliveries_query, many=True)
         return Response(serializer.data)
