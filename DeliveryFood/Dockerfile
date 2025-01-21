@@ -5,6 +5,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    libcairo2 libpango1.0-0 \
+    libcairo2-dev libpango1.0-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV VIRTUAL_ENV=/venv
 RUN python -m venv $VIRTUAL_ENV

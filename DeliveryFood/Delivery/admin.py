@@ -1,4 +1,10 @@
 from django.contrib import admin
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from weasyprint import HTML
+from django.template.loader import render_to_string
+import tempfile
 from .models import (
     User,
     Restaurant,
@@ -30,7 +36,6 @@ class OrderMenuItemInline(admin.TabularInline):
 class OrderAdmin(SimpleHistoryAdmin, ExportMixin):
     list_display = (
         "id",
-        "user_link",
         "restaurant",
         "order_date",
         "total_price",
@@ -42,21 +47,23 @@ class OrderAdmin(SimpleHistoryAdmin, ExportMixin):
     date_hierarchy = "order_date"
     inlines = [OrderMenuItemInline]
     readonly_fields = ("total_price",)
+    actions = ["export_as_pdf"]
 
-    def save_related(self, request, form, formsets, change):
-        """Пересчет общей стоимости после сохранения связанных объектов."""
-        super().save_related(request, form, formsets, change)
-        form.instance.update_total_price()
+    def export_as_pdf(self, request, queryset):
+        """Генерация PDF для выбранных заказов."""
+        orders = queryset
+        html_string = render_to_string("Delivery/admin/orders_pdf_template.html", {"orders": orders})
+        html = HTML(string=html_string)
 
-    def user_link(self, obj):
-        """Ссылка на пользователя в админке."""
-        link = reverse(
-            f"admin:{obj.user._meta.app_label}_{obj.user._meta.model_name}_change",
-            args=[obj.user.id],
-        )
-        return format_html('<a href="{}">{}</a>', link, obj.user.username)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            html.write_pdf(target=tmp_file.name)
+            with open(tmp_file.name, "rb") as pdf:
+                response = HttpResponse(pdf.read(), content_type="application/pdf")
+                response["Content-Disposition"] = "inline; filename=orders.pdf"
+                return response
 
-    user_link.short_description = "Пользователь"
+    export_as_pdf.short_description = "Экспортировать в PDF"
+
 
 
 @admin.register(MenuItem)

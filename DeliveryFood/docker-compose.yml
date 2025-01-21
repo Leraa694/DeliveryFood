@@ -36,7 +36,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: celery-cont
-    command: celery -A InterviewHub worker --loglevel=info
+    command: celery -A DeliveryFood worker --loglevel=info
     depends_on:
       - redis
     environment:
@@ -51,7 +51,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: celery-beat-cont
-    command: celery -A InterviewHub beat --loglevel=info
+    command: celery -A DeliveryFood beat --loglevel=info
     depends_on:
       - redis
     environment:
