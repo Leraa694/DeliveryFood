@@ -158,7 +158,7 @@ class Order(models.Model):
         related_name="orders",
         verbose_name="Ресторан",
     )
-    link_dogovor = models.URLField(null=True, blank=True, verbose_name="Договор ссылка")
+    link_dogovor = models.URLField(null=True, blank=True, verbose_name="Ссылка на договор")
     order_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата заказа")
     total_price = models.DecimalField(
         max_digits=10, decimal_places=2, default=0, verbose_name="Общая стоимость"
@@ -169,19 +169,20 @@ class Order(models.Model):
         default="new",
         verbose_name="Статус заказа",
     )
+    additional_notes = models.TextField(
+        null=True, blank=True, verbose_name="Дополнительные примечания"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     def update_total_price(self):
-        """Обновляет общую стоимость заказа на основе позиций."""
         self.total_price = sum(item.price for item in self.order_items.all())
 
     def save(self, *args, **kwargs):
-        """Переопределяем метод save для автоматического обновления общей стоимости."""
-        is_new = self.pk is None  # Проверяем, новый ли объект
-        super().save(*args, **kwargs)  # Сначала сохраняем объект
-        if not is_new:  # Обновляем общую стоимость только для существующих объектов
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if not is_new:
             self.update_total_price()
-            super().save(*args, **kwargs)  # Сохраняем снова после обновления цены
+            super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Заказ {self.id} от {self.user.get_full_name()} из ресторана {self.restaurant.name}"
@@ -189,8 +190,7 @@ class Order(models.Model):
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
-        ordering = ["total_price"]
-
+        ordering = ["-created_at"]
 
 class OrderMenuItem(models.Model):
     history = HistoricalRecords()

@@ -2,16 +2,44 @@
 {% load static %}
 {% block title %}Форма заказа{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'Delivery/order/css/order_form.css' %}">
-{% endblock %}
-
 {% block content %}
-<h1>{% if form.instance.pk %}Редактирование заказа{% else %}Создание заказа{% endif %}</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Сохранить</button>
-</form>
-<a href="{% url 'order_list' %}">Вернуться к списку</a>
+<div class="form-container">
+    <div class="form-header">
+        <h1>
+            {% if form.instance.pk %}
+            Редактирование заказа
+            {% else %}
+            Создание заказа
+            {% endif %}
+        </h1>
+    </div>
+
+    <!-- Медиа из формы -->
+    {{ form.media }}
+
+    <form method="post" enctype="multipart/form-data" class="styled-form">
+        {% csrf_token %}
+        <div class="form-errors">
+            {{ form.non_field_errors }}
+        </div>
+
+        {% for field in form %}
+        <div class="form-group {% if field.errors %}has-error{% endif %}">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+            <small class="form-help">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+            <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">Сохранить</button>
+            <a href="{% url 'order_list' %}" class="btn-cancel">Отменить</a>
+        </div>
+    </form>
+</div>
 {% endblock %}
