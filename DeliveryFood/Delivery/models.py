@@ -100,6 +100,13 @@ class Restaurant(models.Model):
         TypeCuisine, related_name="restaurants", verbose_name="Типы кухни",
         through='RestaurantCuisine'
     )
+    image = models.ImageField(
+        upload_to="restaurant_images/",
+        blank=True,
+        null=True,
+        verbose_name="Фотография ресторана",
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png"])],
+    )
 
     def __str__(self):
         return self.name
@@ -107,7 +114,6 @@ class Restaurant(models.Model):
     class Meta:
         verbose_name = "Ресторан"
         verbose_name_plural = "Рестораны"
-
 
 class MenuItem(models.Model):
     history = HistoricalRecords()
@@ -171,6 +177,13 @@ class Order(models.Model):
     )
     additional_notes = models.TextField(
         null=True, blank=True, verbose_name="Дополнительные примечания"
+    )
+    image = models.ImageField(
+        upload_to="order_images/",
+        blank=True,
+        null=True,
+        verbose_name="Изображение к заказу",
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png"])],
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
