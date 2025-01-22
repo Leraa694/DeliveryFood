@@ -1,0 +1,72 @@
+{% extends "base_order.html" %}
+{% load static %}
+{% block title %}Все рестораны{% endblock %}
+
+{% block extra_css %}
+<style>
+.card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,.15);
+    width: 240px;
+    text-align: center;
+    overflow: hidden;
+    flex: 1 1 auto;
+}
+.card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+.card-body {
+    padding: 0.5rem 1rem;
+}
+.card-title {
+    font-size: 1.2rem;
+    margin: 0.5rem 0;
+    color: #333;
+}
+.card-description {
+    font-size: 0.9rem;
+    color: #777;
+    margin-bottom: 0.5rem;
+}
+.card button {
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Все рестораны (сортировка по популярности)</h1>
+
+<form method="get">
+    <input type="text" name="q" placeholder="Поиск по названию..." value="{{ query }}">
+    <button type="submit">Поиск</button>
+</form>
+
+<div class="card-grid">
+    {% for restaurant in restaurants %}
+    <div class="card">
+        {% if restaurant.image %}
+        <img src="{{ restaurant.image.url }}" alt="{{ restaurant.name }}">
+        {% else %}
+        <img src="{% static 'Delivery/images/no_image.jpg' %}" alt="No image">
+        {% endif %}
+        <div class="card-body">
+            <h3 class="card-title">{{ restaurant.name }}</h3>
+            <p class="card-description">{{ restaurant.address|truncatechars:50 }}</p>
+            <button onclick="window.location.href='{% url 'restaurant_detail' restaurant.id %}'">
+                Подробнее
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

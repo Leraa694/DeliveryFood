@@ -102,7 +102,6 @@ button:hover {
 }
 
 input, textarea {
-    width: 100%;
     padding: 10px;
     margin: 10px 0;
     border: 1px solid #ddd;
@@ -114,4 +113,44 @@ input:focus, textarea:focus {
     border-color: #007bff;
     outline: none;
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+/* Стили для формы поиска в шапке */
+.search-form {
+    display: inline-flex;       /* Размещаем поля и кнопку в одну линию */
+    align-items: center;        /* Выравниваем по вертикали */
+    background-color: #fff;     /* Цвет фона вокруг поля ввода */
+    border-radius: 20px;        /* Округляем края для более современного вида */
+    padding: 2px 10px;          /* Внутренние отступы для "pill"-стиля */
+    margin-left: 20px;          /* Отступ слева, чтобы отделить от других пунктов меню */
+}
+
+.search-form input[type="text"] {
+    border: none;               /* Убираем стандартную рамку */
+    outline: none;              /* Убираем обводку при фокусе (оставив box-shadow или другие эффекты можно по желанию) */
+    font-size: 0.9em;           /* Размер шрифта */
+    color: #333;                /* Цвет текста */
+    padding: 8px 0;             /* Вертикальные отступы, чтобы текст не "прилипал" */
+    margin-right: 8px;          /* Отступ от кнопки */
+    background-color: transparent; /* Фон делаем прозрачным, так как внешний блок уже белый */
+}
+
+.search-form input[type="text"]::placeholder {
+    color: #aaa;                /* Цвет плейсхолдера */
+}
+
+.search-form button {
+    background: none;           /* Убираем фон кнопки, чтобы она смотрелась иконкой/текстом поверх белого фона */
+    border: none;               /* Убираем стандартную границу */
+    color: #007bff;            /* Цвет текста кнопки под цвет шапки */
+    font-size: 0.9em;           /* Размер шрифта кнопки */
+    cursor: pointer;            /* Указатель при наведении */
+    padding: 8px;               /* Отступы вокруг текста/иконки */
+    border-radius: 50%;         /* Можно сделать кнопку круглой, если хотите иконку */
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Ховер-эффект для кнопки поиска */
+.search-form button:hover {
+    background-color: #007bff;
+    color: #fff;
 }

@@ -1,0 +1,31 @@
+{% extends "base_order.html" %}
+{% load static %}
+{% block title %}Ресторан {{ restaurant.name }}{% endblock %}
+
+{% block content %}
+<h1>{{ restaurant.name }}</h1>
+
+{% if restaurant.image %}
+<img src="{{ restaurant.image.url }}" alt="{{ restaurant.name }}" style="max-width:300px;">
+{% endif %}
+
+<p><strong>Адрес:</strong> {{ restaurant.address }}</p>
+<p><strong>Телефон:</strong> {{ restaurant.phone }}</p>
+
+<h3>Типы кухни</h3>
+<ul>
+    {% for cuisine in cuisines %}
+    <li>{{ cuisine.name }}</li>
+    {% endfor %}
+</ul>
+
+<h3>Доступные блюда</h3>
+<ul>
+    {% for dish in menu_items %}
+    <li>
+        <strong>{{ dish.name }}</strong> — {{ dish.price }}₽
+        (<a href="{% url 'dish_detail' dish.id %}">Подробнее</a>)
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

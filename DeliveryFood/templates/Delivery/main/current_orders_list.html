@@ -1,0 +1,95 @@
+{% extends "base_order.html" %}
+{% load static %}
+{% block title %}Текущие заказы{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Табличная верстка или карточная — на ваш выбор. 
+   Ниже пример в формате таблицы. */
+.table-wrapper {
+    margin-top: 2rem;
+    overflow-x: auto;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    box-shadow: 0 2px 5px rgba(0,0,0,.15);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: white;
+}
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+table th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #555;
+}
+table tbody tr:nth-child(odd) {
+    background-color: #f9f9f9;
+}
+table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+button {
+    padding: 6px 10px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+}
+button:hover {
+    background-color: #0056b3;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Текущие заказы</h1>
+
+<!-- Форма поиска (по названию ресторана) -->
+<form method="get">
+    <input type="text" name="q" placeholder="Поиск по названию ресторана..." value="{{ query }}">
+    <button type="submit">Искать</button>
+</form>
+
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>ID заказа</th>
+                <th>Ресторан</th>
+                <th>Пользователь</th>
+                <th>Дата заказа</th>
+                <th>Статус</th>
+                <th>Подробнее</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for order in orders %}
+            <tr>
+                <td>{{ order.id }}</td>
+                <td>{{ order.restaurant.name }}</td>
+                <td>{{ order.user.get_full_name|default:order.user.username }}</td>
+                <td>{{ order.order_date|date:"d.m.Y H:i" }}</td>
+                <td>{{ order.get_status_display }}</td>
+                <td>
+                    <button onclick="window.location.href='{% url 'order_detail' order.id %}'">
+                        Открыть
+                    </button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6">Нет текущих заказов</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

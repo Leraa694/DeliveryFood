@@ -1,0 +1,14 @@
+{% extends "base_order.html" %}
+{% load static %}
+{% block title %}{{ dish.name }}{% endblock %}
+
+{% block content %}
+<h1>{{ dish.name }}</h1>
+{% if dish.image %}
+<img src="{{ dish.image.url }}" alt="{{ dish.name }}" style="max-width:300px;">
+{% endif %}
+
+<p><strong>Цена:</strong> {{ dish.price }}₽</p>
+<p><strong>Описание:</strong> {{ dish.description|default:"Не указано" }}</p>
+<p><strong>Ресторан:</strong> {{ dish.restaurant.name }}</p>
+{% endblock %}
