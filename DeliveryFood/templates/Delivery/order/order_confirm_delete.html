@@ -1,17 +1,18 @@
 {% extends "base_order.html" %}
 {% load static %}
-{% block title %}Подтверждение удаления{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'Delivery/order/css/order_confirm_delete.css' %}">
-{% endblock %}
+{% block title %}Удалить заказ №{{ order.id }}{% endblock %}
 
 {% block content %}
-<h1>Подтверждение удаления</h1>
-<p>Вы уверены, что хотите удалить заказ "{{ object }}"?</p>
-<form method="post">
-    {% csrf_token %}
-    <button type="submit">Удалить</button>
-</form>
-<a href="{% url 'order_list' %}">Отмена</a>
+<div style="background-color: #fff; padding: 20px; margin-top:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,.1);">
+    <h1>Удалить заказ №{{ order.id }}?</h1>
+    <p>
+        Вы действительно хотите удалить заказ <strong>№{{ order.id }}</strong>?
+        <br>Эту операцию нельзя будет отменить.
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Удалить</button>
+        <a href="{% url 'order_detail' order.id %}" style="margin-left:10px;">Отмена</a>
+    </form>
+</div>
 {% endblock %}

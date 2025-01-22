@@ -1,7 +1,7 @@
-from django.db.models import Count
-from django.shortcuts import render
 from ..models import Restaurant, MenuItem, Order, TypeCuisine
 from django.shortcuts import render, get_object_or_404
+from django.db.models import Count, Q
+
 
 
 def home(request):
@@ -47,11 +47,11 @@ def home(request):
 def top_restaurants_list(request):
     query = request.GET.get('q', '')
 
-    # Получаем список всех ресторанов (при желании — тех, у которых есть доступные блюда)
+    # Получаем список всех ресторанов с аннотацией количества блюд и заказов
     restaurants = Restaurant.objects.annotate(
-        menu_items_count=Count('menu_items'),
+        menu_items_count=Count('menu_items', filter=Q(menu_items__is_available=True)),
         orders_count=Count('orders')
-    ).filter(menu_items__is_available=True)
+    )
 
     # Поиск по имени ресторана
     if query:
@@ -64,11 +64,8 @@ def top_restaurants_list(request):
         'restaurants': restaurants,
         'query': query,
     }
-    return render(request, 'Delivery/main/top_restaurants_list.html', context)
+    return render(request, 'Delivery/order/top_restaurants_list.html', context)
 
-
-from django.db.models import Count
-from django.shortcuts import render
 
 
 def popular_dishes_list(request):
@@ -139,7 +136,7 @@ def order_detail(request, pk):
         'order': order,
         'order_items': order_items,
     }
-    return render(request, 'Delivery/main/order_detail.html', context)
+    return render(request, 'Delivery/order/order_detail.html', context)
 
 def search(request):
     query = request.GET.get('q', '')
@@ -162,4 +159,4 @@ def search(request):
         'menu_items': menu_items,
         'cuisines': cuisines,
     }
-    return render(request, 'search_results.html', context)
+    return render(request, 'Delivery/main/search_results.html', context)

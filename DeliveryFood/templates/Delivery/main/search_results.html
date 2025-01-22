@@ -1,0 +1,42 @@
+{% extends "base_order.html" %}
+{% load static %}
+{% block title %}Результаты поиска{% endblock %}
+
+{% block content %}
+<h1>Результаты поиска: "{{ query }}"</h1>
+<form method="get" action="{% url 'search' %}">
+    <input type="text" name="q" value="{{ query }}" placeholder="Поиск...">
+    <button type="submit">Искать</button>
+</form>
+
+<h2>Рестораны</h2>
+<ul>
+    {% for r in restaurants %}
+    <li>
+        <a href="{% url 'restaurant_detail' r.id %}">{{ r.name }}</a>
+    </li>
+    {% empty %}
+    <li>Нет ресторанов по запросу.</li>
+    {% endfor %}
+</ul>
+
+<h2>Блюда</h2>
+<ul>
+    {% for m in menu_items %}
+    <li>
+        <a href="{% url 'dish_detail' m.id %}">{{ m.name }}</a>
+    </li>
+    {% empty %}
+    <li>Нет блюд по запросу.</li>
+    {% endfor %}
+</ul>
+
+<h2>Типы кухни</h2>
+<ul>
+    {% for c in cuisines %}
+    <li>{{ c.name }}</li>
+    {% empty %}
+    <li>Нет типов кухни по запросу.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

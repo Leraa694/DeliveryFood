@@ -15,8 +15,8 @@
             <ul>
                 <li><a href="{% url 'home' %}">Главная</a></li>
                 <li><a href="{% url 'current_orders_list' %}">Список заказов</a></li>
-                <li><a href="{% url 'order_new' %}">Создать заказ</a></li>
-                <li><a href="{% url 'restaurants' %}">Рестораны</a></li>
+                <li><a href="{% url 'order_create' %}">Создать заказ</a></li>
+                <li><a href="{% url 'top_restaurants_list' %}">Рестораны</a></li>
                 <li>
                     <!-- Форма поиска -->
                     <form class="search-form" action="{% url 'search' %}" method="get">

@@ -1,23 +1,13 @@
 from django.urls import path
-from .template_views import order_views, restaurants_views
-from .views.home_views import (
-    home,
-    top_restaurants_list,
-    popular_dishes_list,
-    current_orders_list,
-    restaurant_detail,
-    dish_detail,
-    order_detail,
-    search
-)
+from .template_views import order_views
+from .template_views.home_views import *
+from .template_views.order_views import *
 
 urlpatterns = [
     # Существующие URL'ы
-    path("orders/", order_views.order_list, name="order_list"),
-    path("orders/new/", order_views.order_form, name="order_new"),
-    path("orders/<int:pk>/edit/", order_views.order_form, name="order_edit"),
-    path("orders/<int:pk>/delete/", order_views.order_confirm_delete, name="order_confirm_delete"),
-    path("restaurants/", restaurants_views.restaurant_list, name="restaurants"),
+    path("orders/create/", order_create, name="order_create"),
+    path("orders/<int:pk>/edit/", order_edit, name="order_edit"),
+    path("orders/<int:pk>/delete/", order_confirm_delete, name="order_confirm_delete"),
 
     # Главная
     path("", home, name="home"),

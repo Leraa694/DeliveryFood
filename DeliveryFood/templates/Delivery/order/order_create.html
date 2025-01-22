@@ -1,0 +1,175 @@
+{% extends "base_order.html" %}
+{% load static %}
+{% block title %}Создать заказ{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 20px auto;
+        background-color: #fff;
+        padding: 20px 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        font-family: Arial, sans-serif;
+    }
+    .form-container h1 {
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+        color: #333;
+        text-align: center;
+    }
+    label {
+        font-weight: bold;
+        margin-top: 10px;
+        display: block;
+        color: #555;
+    }
+    input:not([type="radio"]), select, textarea {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0 20px 0;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+    }
+    input[type="number"] {
+        width: 95%;
+    }
+    input:focus, select:focus, textarea:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    }
+    .formset-group {
+        margin-top: 30px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    .formset-group h2 {
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        color: #007bff;
+    }
+    .formset-item {
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        background-color: #fff;
+        position: relative;
+    }
+    .formset-item label {
+        margin-top: 0;
+    }
+    .formset-item .delete-checkbox {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    button[type="submit"] {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    button[type="submit"]:hover {
+        background-color: #0056b3;
+    }
+    .delete-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #dc3545;
+        cursor: pointer;
+        line-height: 1;
+    }
+
+    .delete-checkbox {
+        display: none; /* Скрываем чекбокс */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Создать заказ</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <!-- Основные поля -->
+        <div>
+            {{ form.user.label_tag }}
+            {{ form.user }}
+            {{ form.user.errors }}
+        </div>
+        <div>
+            {{ form.restaurant.label_tag }}
+            {{ form.restaurant }}
+            {{ form.restaurant.errors }}
+        </div>
+        <div>
+            {{ form.status.label_tag }}
+            {{ form.status }}
+            {{ form.status.errors }}
+        </div>
+        <div>
+            {{ form.link_dogovor.label_tag }}
+            {{ form.link_dogovor }}
+            {{ form.link_dogovor.errors }}
+        </div>
+        <div>
+            {{ form.image.label_tag }}
+            {{ form.image }}
+            {{ form.image.errors }}
+        </div>
+        <div>
+            {{ form.additional_notes.label_tag }}
+            {{ form.additional_notes }}
+            {{ form.additional_notes.errors }}
+        </div>
+
+        <!-- Formset позиций -->
+        <div class="formset-group">
+            <h2>Блюда в заказе</h2>
+            {{ formset.management_form }}
+            {% for form_i in formset %}
+            <div class="formset-item">
+                {{ form_i.non_field_errors }}
+                {{ form_i.menu_item.label_tag }} {{ form_i.menu_item }}
+                {{ form_i.menu_item.errors }}
+                {{ form_i.quantity.label_tag }} {{ form_i.quantity }}
+                {{ form_i.quantity.errors }}
+
+                {% if formset.can_delete %}
+                <!-- Обязательно отрисовать само поле DELETE (обычно оно скрыто) -->
+                <div style="display: none">
+                    {{ form_i.DELETE }}
+                </div>
+
+                <button type="button" class="delete-button"
+                        onclick="document.getElementById('{{ form_i.DELETE.id_for_label }}').checked = true;
+                             this.closest('.formset-item').style.display = 'none';">
+                    &times;
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <button type="submit">Сохранить</button>
+    </form>
+</div>
+{% endblock %}

@@ -57,7 +57,7 @@
         {% if restaurant.image %}
         <img src="{{ restaurant.image.url }}" alt="{{ restaurant.name }}">
         {% else %}
-        <img src="{% static 'Delivery/images/no_image.jpg' %}" alt="No image">
+        <img src="{% static 'Delivery/images/default_restaurant.jpg' %}" alt="Default restaurant">
         {% endif %}
         <div class="card-body">
             <h3 class="card-title">{{ restaurant.name }}</h3>

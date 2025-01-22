@@ -58,7 +58,7 @@
         {% if dish.image %}
         <img src="{{ dish.image.url }}" alt="{{ dish.name }}">
         {% else %}
-        <img src="{% static 'Delivery/images/no_image.jpg' %}" alt="No image">
+        <img src="{% static 'Delivery/images/default_dish.jpg' %}" alt="No image">
         {% endif %}
         <div class="card-body">
             <h3 class="card-title">{{ dish.name }}</h3>
