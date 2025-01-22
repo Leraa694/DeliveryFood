@@ -55,7 +55,7 @@ def top_restaurants_list(request):
 
     # Поиск по имени ресторана
     if query:
-        restaurants = restaurants.filter(name__icontains=query)
+        restaurants = restaurants.filter(name__iregex=query)
 
     # Сортируем по количеству заказов и блюд
     restaurants = restaurants.order_by('-orders_count', '-menu_items_count')
@@ -77,7 +77,7 @@ def popular_dishes_list(request):
 
     # Поиск по названию блюда
     if query:
-        menu_items = menu_items.filter(name__icontains=query)
+        menu_items = menu_items.filter(name__iregex=query)
 
     context = {
         'menu_items': menu_items,
@@ -96,7 +96,7 @@ def current_orders_list(request):
 
     # Простой поиск по названию ресторана (можно расширить)
     if query:
-        orders = orders.filter(restaurant__name__icontains=query)
+        orders = orders.filter(restaurant__name__iregex=query)
 
     orders = orders.order_by('-created_at')
     context = {
@@ -142,7 +142,7 @@ def search(request):
     query = request.GET.get('q', '')
 
     # Поиск ресторанов
-    restaurants = Restaurant.objects.filter(name__icontains=query)
+    restaurants = Restaurant.objects.filter(name__iregex=query)
 
     # Поиск блюд
     menu_items = MenuItem.objects.filter(
@@ -151,7 +151,7 @@ def search(request):
     )
 
     # Поиск по типам кухни
-    cuisines = TypeCuisine.objects.filter(name__icontains=query)
+    cuisines = TypeCuisine.objects.filter(name__iregex=query)
 
     context = {
         'query': query,
